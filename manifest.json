@@ -1,0 +1,24 @@
+{
+  "name": "Aplikasi Rapor SD - Kelas 1-6",
+  "short_name": "Rapor SD",
+  "description": "Aplikasi untuk membuat Rapor Peserta Didik SD (Kelas 1-6) dengan fitur Single & Batch Excel + CP/TP. Sesuai Kurikulum Merdeka.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a5276",
+  "theme_color": "#1a5276",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "pwa_assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "pwa_assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "scope": "/",
+  "lang": "id-ID"
+}

@@ -1,2 +1,115 @@
-# rapor-sd-app
-Aplikasi Rapor SD Kelas 1-6
+# 📘 Aplikasi Rapor SD Kelas 1-6 (Kurikulum Merdeka)
+
+Aplikasi web sederhana berbasis **Streamlit** untuk membuat Rapor Peserta Didik Sekolah Dasar (Kelas 1 sampai 6) dengan cepat, akurat, dan langsung bisa diunduh dalam format PDF profesional.
+
+## ✨ Fitur Utama
+
+- **Input nilai super mudah** untuk semua mata pelajaran SD (mode Single Student)
+- **Batch Processing dari Excel** — Buat puluhan atau ratusan rapor PDF sekaligus hanya dengan mengisi **1 file Excel**! (fitur baru & sangat powerful untuk sekolah)
+- **Deskripsi Capaian Kompetensi otomatis** yang positif, memotivasi, dan sesuai kaidah Kurikulum Merdeka
+- **Predikat otomatis** (A/B/C/D) berdasarkan nilai
+- **PDF rapi & profesional** siap cetak (ukuran A4)
+- Mendukung perbedaan mata pelajaran antar kelas:
+  - Kelas 1-2 (Fase A): Agama, Pancasila, BI, Matematika, PJOK, Seni Budaya, Muatan Lokal
+  - Kelas 3-4 (Fase B): + IPAS
+  - Kelas 5-6 (Fase C): + Bahasa Inggris
+- Format mengikuti **Panduan Pembelajaran dan Asesmen** Kemendikdasmen
+
+## 📥 Cara Install & Menjalankan (5 Menit)
+
+### 1. Pastikan Python sudah terinstall
+Buka terminal / Command Prompt dan ketik:
+```bash
+python --version
+```
+Harus muncul versi Python 3.9 atau lebih baru.
+
+### 2. Download / Salin Folder `rapor_sd_app`
+
+### 3. Buka terminal di folder tersebut dan install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Jalankan aplikasinya:
+```bash
+streamlit run app.py
+```
+
+Aplikasi akan otomatis terbuka di browser (biasanya http://localhost:8501)
+
+## 🖥️ Cara Menggunakan Aplikasi
+
+1. **Isi Identitas Sekolah** (nama SD, NPSN, alamat)
+2. **Isi Identitas Siswa** (nama, NISN, pilih Kelas & Semester & Tahun Ajaran)
+3. **Pilih Agama** siswa (penting untuk nama mata pelajaran Agama)
+4. **Input Nilai Akhir** (0-100) untuk setiap mata pelajaran
+   - Predikat (A/B/C/D) akan muncul otomatis
+5. **Edit Deskripsi** (opsional) — deskripsi sudah dibuat otomatis sesuai nilai dan mapel. Anda bisa sesuaikan dengan observasi nyata.
+6. Isi **Kehadiran** dan **Catatan Wali Kelas**
+7. Isi nama & NIP **Wali Kelas** dan **Kepala Sekolah**
+8. Klik tombol besar **GENERATE & DOWNLOAD RAPOR PDF**
+9. PDF langsung terunduh — siap dicetak atau diarsipkan!
+
+## 📋 Contoh Output PDF
+
+PDF berisi:
+- Header resmi + nama sekolah
+- Identitas lengkap siswa + Fase
+- Tabel Nilai + Capaian Kompetensi (dengan deskripsi yang rapi)
+- Ketidakhadiran
+- Catatan Wali Kelas
+- 3 kolom tanda tangan (Wali Kelas, Kepala Sekolah, Orang Tua)
+- Tanggal & tempat
+
+## ⚠️ Catatan Penting
+
+- Aplikasi ini **gratis** dan dibuat untuk memudahkan guru.
+- Deskripsi otomatis sudah menggunakan bahasa positif & memotivasi sesuai contoh resmi Kemendikdasmen.
+- **Anda tetap harus menyesuaikan deskripsi** dengan kondisi nyata siswa.
+
+## 📱 Cara Install sebagai Aplikasi di Android (PWA)
+
+Aplikasi ini sudah didukung sebagai **Progressive Web App (PWA)**, sehingga bisa di-install di HP Android seperti aplikasi biasa.
+
+### Langkah-langkah:
+
+1. **Deploy aplikasi ke internet** (paling mudah pakai Streamlit Community Cloud - gratis):
+   - Buat akun di [share.streamlit.io](https://share.streamlit.io)
+   - Upload folder `rapor_sd_app` ke GitHub (private atau public)
+   - Deploy dari Streamlit Cloud
+
+2. **Buka di HP Android** menggunakan browser **Chrome**
+
+3. Ketuk menu **⋮** (tiga titik) di pojok kanan atas
+
+4. Pilih **"Add to Home screen"** atau **"Install Rapor SD"**
+
+5. Tekan **Install** / **Tambahkan**
+
+6. Ikon aplikasi akan muncul di layar utama HP Anda seperti aplikasi native.
+
+Setelah di-install, aplikasi akan terbuka dalam mode fullscreen dan terasa seperti aplikasi Android asli.
+
+> Catatan: Untuk pengalaman terbaik, aplikasi sebaiknya diakses melalui HTTPS (saat di-deploy).
+- Untuk sekolah dengan banyak siswa, Anda bisa menjalankan aplikasi berulang kali atau mengembangkan versi batch (Excel → banyak PDF).
+- Logo sekolah belum disertakan di versi ini (bisa ditambahkan kemudian).
+
+## 🛠️ Pengembangan Lanjutan (Opsional)
+
+Jika ingin lebih advanced:
+- Tambah upload logo sekolah ke PDF
+- Support multiple siswa sekaligus (import dari Excel)
+- Simpan data ke database
+- Fitur tanda tangan digital
+
+## 📞 Dukungan
+
+Jika ada error atau ingin request fitur tambahan, silakan hubungi pembuat aplikasi.
+
+---
+
+**Dibuat dengan ❤️ untuk para guru SD Indonesia**  
+Format sesuai Panduan Pembelajaran dan Asesmen Kurikulum Merdeka (edisi terbaru)
+
+Selamat menggunakan! Semoga mempermudah administrasi rapor Anda. 🙏
