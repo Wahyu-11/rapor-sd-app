@@ -26,6 +26,13 @@ Aplikasi web sederhana berbasis **Streamlit** untuk membuat Rapor Peserta Didik 
 - Label dan nilai dipisahkan sehingga tidak lagi bergantung pada padding spasi (yang tidak akurat di font proporsional seperti Helvetica). 
 - Hasil: tampilan lebih profesional, rapi, dan mudah dibaca — persis seperti formulir rapor resmi.
 
+**Update v1.3 (Muatan Lokal fleksibel - Juni 2026):** 
+- Menambahkan **pilihan nama Muatan Lokal** yang bisa disesuaikan langsung di UI (Single Student & Batch Excel). 
+- Sekarang guru bisa mengganti label "Muatan Lokal" menjadi nama spesifik sesuai daerah/sekolah, misalnya: **Bahasa Jawa**, **Bahasa Sunda**, **Budaya Betawi**, **Seni Tradisi Lokal**, **Kearifan Lokal**, dll.
+- Nilai tetap diinput di kolom yang sama (atau field nilai), deskripsi otomatis tetap relevan (fokus pelestarian budaya & kearifan daerah).
+- Fitur ini memudahkan sekolah yang memiliki Muatan Lokal khusus tanpa perlu menambah mapel manual setiap kali.
+- Batch Excel tetap kompatibel (gunakan kolom Nilai_Muatan_Lokal untuk nilainya).
+
 ## 📥 Cara Install & Menjalankan (5 Menit)
 
 ### 1. Pastikan Python sudah terinstall

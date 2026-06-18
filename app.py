@@ -85,8 +85,10 @@ def get_fase(kelas):
     else:
         return "C"
 
-def get_subjects(kelas, agama_label):
-    """Daftar mata pelajaran sesuai kelas (Kurikulum Merdeka)"""
+def get_subjects(kelas, agama_label, muatan_lokal_name="Muatan Lokal"):
+    """Daftar mata pelajaran sesuai kelas (Kurikulum Merdeka).
+    muatan_lokal_name: Nama kustom untuk Muatan Lokal / Kearifan Lokal Daerah (misal: 'Bahasa Jawa', 'Budaya Betawi', dll).
+    """
     subjects = [
         f"Pendidikan Agama {agama_label} dan Budi Pekerti",
         "Pendidikan Pancasila",
@@ -101,7 +103,7 @@ def get_subjects(kelas, agama_label):
     ])
     if kelas >= 5:
         subjects.append("Bahasa Inggris")
-    subjects.append("Muatan Lokal")
+    subjects.append(muatan_lokal_name)
     return subjects
 
 def generate_deskripsi_otomatis(nama_lengkap, mapel, nilai):
@@ -573,11 +575,12 @@ def create_excel_template():
         "- Tahun_Ajaran contoh: 2025/2026",
         "- Untuk deskripsi: sistem akan generate otomatis berdasarkan nilai (sangat disarankan)",
         "- Jika ingin deskripsi custom, gunakan mode Single Student atau edit PDF setelah dihasilkan",
+        "- Nama Muatan Lokal bisa disesuaikan di UI (Single atau Batch) → misal diganti 'Bahasa Jawa' atau 'Budaya Lokal'. Kolom Excel tetap 'Nilai_Muatan_Lokal'",
         "",
         "Kolom Nilai yang tersedia:",
         "- Nilai_Agama, Nilai_Pancasila, Nilai_Bahasa_Indonesia, Nilai_Matematika",
         "- Nilai_IPAS (untuk kelas 3+), Nilai_PJOK, Nilai_Seni_Budaya",
-        "- Nilai_Bahasa_Inggris (untuk kelas 5+), Nilai_Muatan_Lokal",
+        "- Nilai_Bahasa_Inggris (untuk kelas 5+), Nilai_Muatan_Lokal (nilai untuk mapel Muatan Lokal / kearifan lokal apapun namanya)",
     ]
     
     for i, line in enumerate(instructions, start=3):
@@ -675,12 +678,13 @@ def create_excel_template():
     return output.getvalue()
 
 
-def process_batch_excel(df, nama_sekolah="SD Negeri Contoh", npsn="00000000", alamat_sekolah="", kota="Kota Contoh", logo_bytes=None):
+def process_batch_excel(df, nama_sekolah="SD Negeri Contoh", npsn="00000000", alamat_sekolah="", kota="Kota Contoh", logo_bytes=None, muatan_lokal_name="Muatan Lokal"):
     """
     Memproses DataFrame dari Excel dan menghasilkan ZIP berisi semua PDF rapor.
     Menggunakan auto-generate deskripsi berdasarkan nilai.
     School identity diambil dari parameter UI batch (sama untuk semua siswa).
     logo_bytes: bytes dari file logo yang sama untuk semua rapor (opsional).
+    muatan_lokal_name: Nama kustom Muatan Lokal yang sama untuk semua siswa dalam batch (default: "Muatan Lokal").
     """
     zip_buffer = BytesIO()
     
@@ -718,11 +722,11 @@ def process_batch_excel(df, nama_sekolah="SD Negeri Contoh", npsn="00000000", al
                 }
                 
                 # Bangun daftar mapel & nilai berdasarkan kelas
-                subjects = get_subjects(kelas, agama)
+                subjects = get_subjects(kelas, agama, muatan_lokal_name)
                 nilai_list = []
                 deskripsi_list = []
                 
-                # Mapping nama kolom Excel ke mapel
+                # Mapping nama kolom Excel ke mapel (kolom Excel tetap "Nilai_Muatan_Lokal" untuk kesederhanaan)
                 mapel_to_col = {
                     f"Pendidikan Agama {agama} dan Budi Pekerti": "Nilai_Agama",
                     "Pendidikan Pancasila": "Nilai_Pancasila",
@@ -732,7 +736,7 @@ def process_batch_excel(df, nama_sekolah="SD Negeri Contoh", npsn="00000000", al
                     "Pendidikan Jasmani, Olahraga dan Kesehatan (PJOK)": "Nilai_PJOK",
                     "Seni Budaya": "Nilai_Seni_Budaya",
                     "Bahasa Inggris": "Nilai_Bahasa_Inggris",
-                    "Muatan Lokal": "Nilai_Muatan_Lokal",
+                    muatan_lokal_name: "Nilai_Muatan_Lokal",
                 }
                 
                 for mapel in subjects:
@@ -892,19 +896,28 @@ with tab1:
     fase = get_fase(kelas)
     st.caption(f"Fase otomatis: **Fase {fase}** (sesuai kelas {kelas})")
     
+    # Pilihan Nama Muatan Lokal (BARU - fleksibel sesuai daerah/sekolah)
+    muatan_lokal_nama = st.text_input(
+        "📍 Nama Muatan Lokal / Kearifan Lokal Daerah",
+        value="Muatan Lokal",
+        key="muatan_lokal_nama",
+        help="Sesuaikan dengan mata pelajaran Muatan Lokal di sekolah Anda (contoh: Bahasa Jawa, Bahasa Sunda, Budaya Betawi, Seni Tradisi Lokal, Kearifan Lokal, dll). Label ini akan digunakan di tabel nilai rapor. Biarkan default jika sekolah menggunakan istilah 'Muatan Lokal'."
+    )
+    
     # === MATA PELAJARAN & NILAI ===
     st.markdown('<div class="section-header">📊 NILAI AKHIR & CAPAIAN KOMPETENSI</div>', unsafe_allow_html=True)
     
     agama_label = agama
-    subjects = get_subjects(kelas, agama_label)
+    subjects = get_subjects(kelas, agama_label, muatan_lokal_nama)
     
-    st.caption(f"📌 {len(subjects)} mata pelajaran untuk Kelas {kelas} (Fase {fase})")
+    st.caption(f"📌 {len(subjects)} mata pelajaran untuk Kelas {kelas} (Fase {fase}) — Muatan Lokal ditampilkan sebagai: **{muatan_lokal_nama}**")
     
     # Inisialisasi session state untuk nilai & deskripsi
-    if 'nilai_data' not in st.session_state or st.session_state.get('last_kelas') != kelas or st.session_state.get('last_agama') != agama:
+    if 'nilai_data' not in st.session_state or st.session_state.get('last_kelas') != kelas or st.session_state.get('last_agama') != agama or st.session_state.get('last_muatan_lokal') != muatan_lokal_nama:
         st.session_state.nilai_data = {}
         st.session_state.last_kelas = kelas
         st.session_state.last_agama = agama
+        st.session_state.last_muatan_lokal = muatan_lokal_nama
     
     # Inisialisasi mata pelajaran tambahan (bisa ditambah/hapus oleh user)
     if 'extra_subjects' not in st.session_state:
@@ -1166,6 +1179,14 @@ with tab2:
             key="batch_logo",
             help="Logo yang sama akan muncul di setiap PDF rapor yang dihasilkan."
         )
+        
+        # Muatan Lokal kustom untuk batch (BARU)
+        batch_muatan_lokal = st.text_input(
+            "📍 Nama Muatan Lokal / Kearifan Lokal Daerah (untuk semua siswa dalam batch)",
+            value="Muatan Lokal",
+            key="batch_muatan_lokal",
+            help="Contoh: Bahasa Jawa, Budaya Sunda, dll. Nilai akan diambil dari kolom 'Nilai_Muatan_Lokal' di Excel."
+        )
     
     # Tombol download template
     if st.button("📥 DOWNLOAD TEMPLATE EXCEL SIAP PAKAI", type="primary", use_container_width=True):
@@ -1208,7 +1229,8 @@ with tab2:
                         npsn=batch_npsn,
                         alamat_sekolah=batch_alamat,
                         kota=batch_kota,
-                        logo_bytes=batch_logo_file.getvalue() if batch_logo_file else None
+                        logo_bytes=batch_logo_file.getvalue() if batch_logo_file else None,
+                        muatan_lokal_name=batch_muatan_lokal
                     )
                 
                 st.success(f"🎉 Selesai! **{success_count}** rapor berhasil dibuat.")
