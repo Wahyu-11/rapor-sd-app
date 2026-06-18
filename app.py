@@ -284,40 +284,58 @@ def create_rapor_pdf(data, pagesize=A4):
     c.drawCentredString(width/2, y, f"NPSN: {data.get('npsn', '-')} | {data.get('alamat_sekolah', '')}")
     y -= 0.7*cm
     
-    # ========== LOGO SEKOLAH (opsional) - digambar setelah header agar tidak tertutup ==========
-    logo_bytes = data.get('logo_bytes')
-    if logo_bytes:
+    # ========== LOGO KIRI ATAS (Header) ==========
+    logo_kiri_bytes = data.get('logo_kiri_bytes')
+    if logo_kiri_bytes:
         try:
-            logo_reader = ImageReader(BytesIO(logo_bytes))
+            logo_reader = ImageReader(BytesIO(logo_kiri_bytes))
             logo_w = 2.0 * cm
             logo_h = 2.0 * cm
-            # Posisi pojok kiri atas, overlay di area header biru sebelah kiri
             c.drawImage(logo_reader, left_margin + 0.3*cm, height - 2.55*cm,
                         width=logo_w, height=logo_h,
                         preserveAspectRatio=True, mask='auto')
         except Exception:
-            pass  # abaikan jika logo bermasalah
+            pass
     
-    # ========== WATERMARK LOGO TRANSPARAN DI TENGAH HALAMAN (BARU) ==========
-    # Logo besar, samar (seperti watermark), di tengah halaman agar tidak mengganggu teks
-    # Hanya muncul jika user mencentang checkbox "Tampilkan logo sebagai Watermark"
-    show_wm = data.get('show_watermark', False)
-    if logo_bytes and show_wm:
+    # ========== LOGO KANAN ATAS (Header) - BARU ==========
+    logo_kanan_bytes = data.get('logo_kanan_bytes')
+    if logo_kanan_bytes:
         try:
-            logo_reader = ImageReader(BytesIO(logo_bytes))
-            # Ukuran watermark besar (sekitar 55-60% lebar halaman, tetap proporsional)
-            wm_size = min(width * 0.58, height * 0.45)   # otomatis menyesuaikan ukuran kertas (A4/F4)
+            logo_reader = ImageReader(BytesIO(logo_kanan_bytes))
+            logo_w = 2.0 * cm
+            logo_h = 2.0 * cm
+            # Posisi pojok kanan atas (simetris dengan logo kiri)
+            right_logo_x = width - right_margin - logo_w - 0.3*cm
+            c.drawImage(logo_reader, right_logo_x, height - 2.55*cm,
+                        width=logo_w, height=logo_h,
+                        preserveAspectRatio=True, mask='auto')
+        except Exception:
+            pass
+    
+    # ========== WATERMARK LOGO TRANSPARAN DI TENGAH HALAMAN ==========
+    show_wm = data.get('show_watermark', False)
+    logo_wm_bytes = data.get('logo_wm_bytes')
+    
+    # Jika tidak ada logo watermark khusus, fallback ke logo kiri (untuk backward compatibility)
+    if not logo_wm_bytes and logo_kiri_bytes:
+        logo_wm_bytes = logo_kiri_bytes
+    
+    if logo_wm_bytes and show_wm:
+        try:
+            logo_reader = ImageReader(BytesIO(logo_wm_bytes))
+            # Ukuran watermark besar (otomatis menyesuaikan kertas A4/F4)
+            wm_size = min(width * 0.58, height * 0.45)
             wm_x = (width - wm_size) / 2
-            wm_y = (height - wm_size) / 2 - 1.2*cm       # sedikit ke atas agar seimbang dengan header & tanda tangan
+            wm_y = (height - wm_size) / 2 - 1.2*cm
             
             c.saveState()
-            c.setFillAlpha(0.08)   # sangat samar/transparan (0.05 - 0.12 biasanya bagus)
+            c.setFillAlpha(0.08)
             c.drawImage(logo_reader, wm_x, wm_y,
                         width=wm_size, height=wm_size,
                         preserveAspectRatio=True, mask='auto')
             c.restoreState()
         except Exception:
-            pass  # abaikan jika logo bermasalah saat watermark
+            pass
     
     # Garis pemisah (ikut primary_color)
     c.setStrokeColor(colors.HexColor(primary_color))
@@ -779,16 +797,16 @@ def create_excel_template():
     return output.getvalue()
 
 
-def process_batch_excel(df, nama_sekolah="SD Negeri Contoh", npsn="00000000", alamat_sekolah="", kota="Kota Contoh", logo_bytes=None, muatan_lokal_name="Muatan Lokal", show_watermark=False,
+def process_batch_excel(df, nama_sekolah="SD Negeri Contoh", npsn="00000000", alamat_sekolah="", kota="Kota Contoh", 
+                        logo_kiri_bytes=None, logo_kanan_bytes=None, logo_wm_bytes=None,
+                        muatan_lokal_name="Muatan Lokal", show_watermark=False,
                         primary_color="#1a5276", table_header_bg="#d5dbdb", row_alt_color="#f8f9f9", page_bg_color="#FFFFFF"):
     """
     Memproses DataFrame dari Excel dan menghasilkan ZIP berisi semua PDF rapor.
     Menggunakan auto-generate deskripsi berdasarkan nilai.
     School identity diambil dari parameter UI batch (sama untuk semua siswa).
-    logo_bytes: bytes dari file logo yang sama untuk semua rapor (opsional).
-    muatan_lokal_name: Nama kustom Muatan Lokal yang sama untuk semua siswa dalam batch (default: "Muatan Lokal").
-    show_watermark: Jika True dan logo_bytes tersedia, setiap PDF akan memiliki logo besar transparan di tengah halaman (watermark).
-    primary_color, table_header_bg, row_alt_color, page_bg_color: Warna tema yang sama untuk semua rapor dalam batch.
+    logo_kiri_bytes, logo_kanan_bytes, logo_wm_bytes: Logo terpisah untuk kiri, kanan, dan watermark (opsional).
+    muatan_lokal_name, show_watermark, primary_color, ... : Parameter lain yang sama untuk semua rapor.
     """
     zip_buffer = BytesIO()
     
@@ -822,9 +840,12 @@ def process_batch_excel(df, nama_sekolah="SD Negeri Contoh", npsn="00000000", al
                     'semester': semester,
                     'tahun_ajaran': tahun_ajaran,
                     'agama': agama,
-                    'logo_bytes': logo_bytes,
+                    # Logo terpisah v1.5
+                    'logo_kiri_bytes': logo_kiri_bytes,
+                    'logo_kanan_bytes': logo_kanan_bytes,
+                    'logo_wm_bytes': logo_wm_bytes,
                     'show_watermark': show_watermark,
-                    # Warna tema batch (sama untuk semua PDF)
+                    # Warna tema batch
                     'primary_color': primary_color,
                     'table_header_bg': table_header_bg,
                     'row_alt_color': row_alt_color,
@@ -975,19 +996,42 @@ with tab1:
         alamat_sekolah = st.text_input("Alamat Sekolah", value="Jl. Pendidikan No. 1, Kota Contoh", key="alamat")
         kota = st.text_input("Kota/Kabupaten", value="Kota Contoh", key="kota")
     
-    # Logo upload (opsional) - akan muncul di pojok kiri atas PDF + Watermark tengah
-    logo_file = st.file_uploader(
-        "🖼️ Upload Logo Sekolah (PNG / JPG, opsional)", 
-        type=["png", "jpg", "jpeg"],
-        help="Logo akan ditampilkan di pojok kiri atas halaman rapor. Gunakan logo resmi sekolah dengan background transparan atau putih untuk hasil terbaik. Ukuran ideal: persegi."
-    )
+    # ==================== LOGO UPLOAD (3 TEMPAT) - BARU v1.5 ====================
+    st.markdown("**🖼️ Upload Logo (Maksimal 3 Logo)**")
+    st.caption("Anda bisa mengunggah logo berbeda untuk posisi yang berbeda. Logo sebaiknya berlatar belakang transparan atau putih bersih.")
+    
+    col_l1, col_l2, col_l3 = st.columns(3)
+    
+    with col_l1:
+        logo_kiri = st.file_uploader(
+            "📍 Logo Kiri Atas (Header)", 
+            type=["png", "jpg", "jpeg"],
+            key="logo_kiri",
+            help="Logo kecil yang muncul di pojok kiri atas header rapor (ukuran ~2x2 cm)."
+        )
+    
+    with col_l2:
+        logo_kanan = st.file_uploader(
+            "📍 Logo Kanan Atas (Header)", 
+            type=["png", "jpg", "jpeg"],
+            key="logo_kanan",
+            help="Logo kecil yang muncul di pojok kanan atas header rapor (misalnya logo Kemendikbud atau emblem lain)."
+        )
+    
+    with col_l3:
+        logo_wm = st.file_uploader(
+            "💧 Logo Watermark Tengah", 
+            type=["png", "jpg", "jpeg"],
+            key="logo_wm",
+            help="Logo besar yang akan ditampilkan samar di tengah halaman sebagai watermark. Ukuran otomatis menyesuaikan."
+        )
     
     show_watermark = st.checkbox(
-        "💧 Tampilkan logo sebagai Watermark transparan di TENGAH halaman",
-        value=True if logo_file else False,
+        "💧 Tampilkan Logo Watermark Tengah di TENGAH halaman (samar/transparan)",
+        value=True if logo_wm else False,
         key="show_watermark",
-        disabled=logo_file is None,
-        help="Jika dicentang, logo akan muncul samar (seperti watermark) di tengah halaman rapor. Memberikan kesan profesional dan branding sekolah yang kuat. Hanya aktif jika logo sudah di-upload."
+        disabled=logo_wm is None,
+        help="Jika dicentang, logo dari kolom 'Logo Watermark Tengah' akan muncul besar dan samar di tengah halaman sebagai background watermark."
     )
     
     # ==================== FITUR BARU: TEMA WARNA & BACKGROUND PDF ====================
@@ -1327,9 +1371,12 @@ with tab1:
                     'nip_kepala': nip_kepala,
                     'tempat_tanggal': tempat_tanggal,
                     'cp_tp_ringkasan': cp_tp_ringkasan,
-                    'logo_bytes': logo_file.getvalue() if logo_file else None,
+                    # Logo terpisah untuk 3 posisi (v1.5)
+                    'logo_kiri_bytes': logo_kiri.getvalue() if logo_kiri else None,
+                    'logo_kanan_bytes': logo_kanan.getvalue() if logo_kanan else None,
+                    'logo_wm_bytes': logo_wm.getvalue() if logo_wm else None,
                     'show_watermark': show_watermark,
-                    # Warna tema & background (dari session_state yang diisi di expander)
+                    # Warna tema & background
                     'primary_color': st.session_state.get('primary_color', '#1a5276'),
                     'table_header_bg': st.session_state.get('table_header_bg', '#d5dbdb'),
                     'row_alt_color': st.session_state.get('row_alt_color', '#f8f9f9'),
@@ -1371,29 +1418,38 @@ with tab2:
             batch_alamat = st.text_input("Alamat Sekolah", value="Jl. Pendidikan No. 1", key="batch_alamat")
             batch_kota = st.text_input("Kota/Kabupaten", value="Kota Contoh", key="batch_kota")
         
-        # Logo untuk batch (sama untuk semua siswa)
-        batch_logo_file = st.file_uploader(
-            "🖼️ Upload Logo Sekolah untuk semua rapor dalam batch ini (opsional)", 
-            type=["png", "jpg", "jpeg"],
-            key="batch_logo",
-            help="Logo yang sama akan muncul di setiap PDF rapor yang dihasilkan."
-        )
+        # ==================== LOGO BATCH (3 TEMPAT) - v1.5 ====================
+        st.markdown("**🖼️ Upload Logo untuk Semua Rapor dalam Batch**")
+        st.caption("Logo yang sama akan digunakan di semua PDF yang dihasilkan dari Excel.")
         
-        # Muatan Lokal kustom untuk batch (BARU)
-        batch_muatan_lokal = st.text_input(
-            "📍 Nama Muatan Lokal / Kearifan Lokal Daerah (untuk semua siswa dalam batch)",
-            value="Muatan Lokal",
-            key="batch_muatan_lokal",
-            help="Contoh: Bahasa Jawa, Budaya Sunda, dll. Nilai akan diambil dari kolom 'Nilai_Muatan_Lokal' di Excel."
-        )
+        col_bl1, col_bl2, col_bl3 = st.columns(3)
         
-        # Watermark checkbox untuk batch (BARU)
+        with col_bl1:
+            batch_logo_kiri = st.file_uploader(
+                "📍 Logo Kiri Atas", type=["png", "jpg", "jpeg"],
+                key="batch_logo_kiri",
+                help="Logo pojok kiri atas header"
+            )
+        with col_bl2:
+            batch_logo_kanan = st.file_uploader(
+                "📍 Logo Kanan Atas", type=["png", "jpg", "jpeg"],
+                key="batch_logo_kanan",
+                help="Logo pojok kanan atas header"
+            )
+        with col_bl3:
+            batch_logo_wm = st.file_uploader(
+                "💧 Logo Watermark Tengah", type=["png", "jpg", "jpeg"],
+                key="batch_logo_wm",
+                help="Logo besar untuk watermark tengah"
+            )
+        
+        # Watermark checkbox untuk batch
         batch_show_watermark = st.checkbox(
-            "💧 Tampilkan logo sebagai Watermark transparan di TENGAH halaman (untuk semua siswa)",
-            value=True if batch_logo_file else False,
+            "💧 Tampilkan Logo Watermark Tengah di TENGAH halaman (untuk semua siswa)",
+            value=True if batch_logo_wm else False,
             key="batch_show_watermark",
-            disabled=batch_logo_file is None,
-            help="Logo akan muncul samar di tengah setiap PDF rapor dalam ZIP yang dihasilkan. Memberikan kesan profesional pada semua dokumen sekaligus."
+            disabled=batch_logo_wm is None,
+            help="Logo watermark akan muncul samar di tengah setiap PDF dalam ZIP."
         )
         
         # ==================== TEMA WARNA UNTUK BATCH (sama untuk semua PDF dalam ZIP) ====================
@@ -1470,7 +1526,9 @@ with tab2:
                         npsn=batch_npsn,
                         alamat_sekolah=batch_alamat,
                         kota=batch_kota,
-                        logo_bytes=batch_logo_file.getvalue() if batch_logo_file else None,
+                        logo_kiri_bytes=batch_logo_kiri.getvalue() if batch_logo_kiri else None,
+                        logo_kanan_bytes=batch_logo_kanan.getvalue() if batch_logo_kanan else None,
+                        logo_wm_bytes=batch_logo_wm.getvalue() if batch_logo_wm else None,
                         muatan_lokal_name=batch_muatan_lokal,
                         show_watermark=batch_show_watermark,
                         primary_color=st.session_state.get('batch_primary_color', '#1a5276'),
