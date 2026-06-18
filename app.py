@@ -226,26 +226,46 @@ def create_rapor_pdf(data):
     c.setFillColor(colors.black)
     c.setFont("Helvetica", 9)
     
-    # Dua kolom identitas
+    # Dua kolom identitas - RAPi & PROFESIONAL: semua titik dua (colon) disejajarkan secara vertikal
+    # Ini membuat tampilan lebih rapi, seperti formulir resmi (label kiri, colon sejajar, nilai setelahnya)
     col1_x = left_margin
     col2_x = left_margin + usable_width * 0.52
     
+    # Data identitas (label, nilai) - pisahkan agar mudah diatur posisi colon
     identitas_kiri = [
-        f"Nama Peserta Didik : {data.get('nama_siswa', '-')}",
-        f"NISN               : {data.get('nisn', '-')}",
-        f"Kelas / Fase       : {data.get('kelas', '-')} / Fase {data.get('fase', '-')}",
+        ("Nama Peserta Didik", data.get('nama_siswa', '-')),
+        ("NISN", data.get('nisn', '-')),
+        ("Kelas / Fase", f"{data.get('kelas', '-')} / Fase {data.get('fase', '-')}"),
     ]
     identitas_kanan = [
-        f"Semester           : {data.get('semester', '-')}",
-        f"Tahun Ajaran       : {data.get('tahun_ajaran', '-')}",
-        f"Agama              : {data.get('agama', '-')}",
+        ("Semester", data.get('semester', '-')),
+        ("Tahun Ajaran", data.get('tahun_ajaran', '-')),
+        ("Agama", data.get('agama', '-')),
     ]
     
-    for i, (kiri, kanan) in enumerate(zip(identitas_kiri, identitas_kanan)):
-        c.drawString(col1_x, y - i*0.38*cm, kiri)
-        c.drawString(col2_x, y - i*0.38*cm, kanan)
+    # Posisi horizontal titik dua yang KONSISTEN (supaya sejajar vertikal di setiap kolom)
+    # Nilai ini sudah disesuaikan dengan lebar font Helvetica 9pt + padding rapi
+    colon_x_kiri = col1_x + 3.35 * cm      # colon untuk kolom kiri (cukup untuk "Nama Peserta Didik")
+    value_x_kiri = colon_x_kiri + 0.28 * cm
     
-    y -= 1.3*cm
+    colon_x_kanan = col2_x + 2.35 * cm     # colon untuk kolom kanan (cukup untuk "Tahun Ajaran")
+    value_x_kanan = colon_x_kanan + 0.28 * cm
+    
+    line_height = 0.45 * cm   # sedikit lebih lega untuk keterbacaan
+    
+    for i, (label, val) in enumerate(identitas_kiri):
+        y_pos = y - i * line_height
+        c.drawString(col1_x, y_pos, label)
+        c.drawString(colon_x_kiri, y_pos, ":")
+        c.drawString(value_x_kiri, y_pos, str(val))
+    
+    for i, (label, val) in enumerate(identitas_kanan):
+        y_pos = y - i * line_height
+        c.drawString(col2_x, y_pos, label)
+        c.drawString(colon_x_kanan, y_pos, ":")
+        c.drawString(value_x_kanan, y_pos, str(val))
+    
+    y -= 3 * line_height + 0.15 * cm   # spacing setelah section identitas
     
     # Garis tipis
     c.setStrokeColor(colors.grey)

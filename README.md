@@ -21,6 +21,11 @@ Aplikasi web sederhana berbasis **Streamlit** untuk membuat Rapor Peserta Didik 
 - Fitur Batch Excel kini menggunakan identitas sekolah dari UI (sebelumnya hardcoded).
 - Deskripsi & keterangan di PDF lebih rapi, tidak terpotong, siap cetak.
 
+**Update v1.2 (perbaikan identitas):** 
+- Penulisan bagian **IDENTITAS PESERTA DIDIK** dirapikan total: semua tanda titik dua (:) sekarang disejajarkan secara vertikal dengan posisi horizontal yang konsisten di setiap kolom (kiri & kanan). 
+- Label dan nilai dipisahkan sehingga tidak lagi bergantung pada padding spasi (yang tidak akurat di font proporsional seperti Helvetica). 
+- Hasil: tampilan lebih profesional, rapi, dan mudah dibaca — persis seperti formulir rapor resmi.
+
 ## 📥 Cara Install & Menjalankan (5 Menit)
 
 ### 1. Pastikan Python sudah terinstall
