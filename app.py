@@ -142,6 +142,20 @@ def get_subjects(kelas, agama_label, muatan_lokal_name="Muatan Lokal"):
     subjects.append(muatan_lokal_name)
     return subjects
 
+
+def get_predikat(nilai, kkm=70):
+    """Menentukan predikat huruf (A/B/C/D) berdasarkan perbandingan nilai dengan KKM.
+    Digunakan untuk kolom baru di tabel rapor PDF."""
+    if nilai >= kkm + 15:
+        return "A"
+    elif nilai >= kkm:
+        return "B"
+    elif nilai >= kkm - 10:
+        return "C"
+    else:
+        return "D"
+
+
 def generate_deskripsi_otomatis(nama_lengkap, mapel, nilai, kkm=70):
     """Generate deskripsi capaian kompetensi yang positif, memotivasi, dan sesuai Kurikulum Merdeka.
     Deskripsi dibedakan antara nilai tinggi (di atas KKM) dan nilai rendah (di bawah KKM)."""
@@ -217,43 +231,6 @@ def generate_deskripsi_otomatis(nama_lengkap, mapel, nilai, kkm=70):
             f"Ananda {capaian}. {contoh} {saran} "
             f"Dengan usaha yang konsisten, Ananda pasti akan segera tuntas dan berkembang lebih optimal!"
         )
-    return deskripsi
-    
-    # Spesifik per mata pelajaran (ringkas & relevan)
-    mapel_lower = mapel.lower()
-    if "agama" in mapel_lower:
-        specific = "memahami dan mengamalkan ajaran agama serta nilai-nilai budi pekerti dalam kehidupan sehari-hari"
-        contoh = "Ananda sudah mampu melaksanakan ibadah dengan khusyuk dan menunjukkan sikap toleransi."
-    elif "pancasila" in mapel_lower:
-        specific = "memahami dan mengamalkan nilai-nilai Pancasila dalam kehidupan bermasyarakat"
-        contoh = "Ananda mampu menyebutkan sila-sila Pancasila dan memberikan contoh penerapannya di sekolah dan rumah."
-    elif "bahasa indonesia" in mapel_lower:
-        specific = "keterampilan berbahasa Indonesia (membaca, menulis, menyimak, dan berbicara)"
-        contoh = "Ananda sudah lancar membaca teks dan menulis paragraf sederhana dengan ejaan yang tepat."
-    elif "matematika" in mapel_lower:
-        specific = "pemahaman konsep bilangan, operasi hitung, geometri, dan pemecahan masalah"
-        contoh = "Ananda mampu menyelesaikan soal cerita dan menggambar bangun datar dengan akurat."
-    elif "ipas" in mapel_lower or "pengetahuan alam" in mapel_lower:
-        specific = "memahami konsep IPA dan IPS serta keterampilan berpikir ilmiah dan sosial"
-        contoh = "Ananda mampu mengamati fenomena alam sekitar dan menjelaskan hubungan sebab-akibat sederhana."
-    elif "jasmani" in mapel_lower or "pjok" in mapel_lower:
-        specific = "keterampilan gerak dasar, kebugaran jasmani, dan sportivitas"
-        contoh = "Ananda aktif berpartisipasi dalam permainan dan menunjukkan sikap kerja sama yang baik."
-    elif "seni" in mapel_lower:
-        specific = "ekspresi kreatif melalui seni rupa, musik, tari, atau teater"
-        contoh = "Ananda mampu mengekspresikan ide melalui karya seni dan menikmati berbagai bentuk seni budaya."
-    elif "inggris" in mapel_lower:
-        specific = "keterampilan dasar berbahasa Inggris (vocabulary, simple sentences, listening & speaking)"
-        contoh = "Ananda sudah mampu memperkenalkan diri dan menyebutkan benda-benda di sekitarnya dalam bahasa Inggris sederhana."
-    else:  # Muatan Lokal
-        specific = "pemahaman dan pelestarian budaya serta kearifan lokal daerah"
-        contoh = "Ananda menunjukkan antusiasme dalam mempelajari bahasa dan tradisi daerah."
-    
-    deskripsi = (
-        f"{nama_depan} menunjukkan perkembangan {level} dalam {specific}. "
-        f"Ananda {capaian}. {contoh} {saran} "
-        f"Semangat terus belajar, Ananda memiliki potensi besar untuk berkembang lebih optimal!"
-    )
     return deskripsi
 
 
@@ -461,44 +438,49 @@ def create_rapor_pdf(data, pagesize=A4):
     c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", 8)
     
-    # Kolom lebar - proporsional & rapi (lebih banyak ruang untuk deskripsi capaian)
-    col_no = left_margin + 0.15*cm
-    col_mapel = left_margin + 0.55*cm
-    mapel_width = usable_width * 0.30
-    col_nilai = left_margin + usable_width * 0.37
-    col_desk = left_margin + usable_width * 0.46
-    desk_width = usable_width * 0.54
+    # ============================================================
+    # KOLOM BARU YANG RAPi & ANTI-OVERLAP (v1.6)
+    # - Kolom Predikat (A/B/C/D) ditambahkan di samping Nilai
+    # - Posisi absolute (cm) + gap 0.12cm dari garis vertikal
+    # - Tidak ada lagi teks yang tertutup garis tabel
+    # ============================================================
+    col_no_x       = left_margin + 0.12*cm
+    col_mapel_x    = left_margin + 0.65*cm
+    mapel_w        = 5.0 * cm
+    col_nilai_x    = left_margin + 5.85*cm
+    nilai_w        = 1.65 * cm
+    col_pred_x     = left_margin + 7.65*cm
+    pred_w         = 1.65 * cm
+    col_desk_x     = left_margin + 9.5*cm
+    desk_w         = usable_width - (col_desk_x - left_margin) - 0.15*cm
     
-    c.drawString(col_no, y - 0.2*cm, "No")
-    c.drawString(col_mapel, y - 0.2*cm, "Mata Pelajaran")
-    c.drawCentredString(col_nilai + 0.6*cm, y - 0.2*cm, "Nilai Akhir")
-    c.drawString(col_desk, y - 0.2*cm, "Capaian Kompetensi")
+    c.drawCentredString(col_no_x + 0.28*cm, y - 0.20*cm, "No")
+    c.drawString(col_mapel_x, y - 0.20*cm, "Mata Pelajaran")
+    c.drawCentredString(col_nilai_x + nilai_w/2, y - 0.20*cm, "Nilai")
+    c.drawCentredString(col_pred_x + pred_w/2, y - 0.20*cm, "Predikat")
+    c.drawString(col_desk_x, y - 0.20*cm, "Capaian Kompetensi")
     
     y -= 0.55*cm
     
-    # Isi tabel nilai - DINAMIS (perbaikan utama v1.3)
-    # Sekarang tinggi setiap baris dihitung otomatis berdasarkan jumlah baris teks aktual setelah wrapping.
-    # Tidak ada lagi batas hard-coded [:3] atau [:5], sehingga teks tidak pernah terpotong/hilang
-    # meskipun user menambahkan banyak mata pelajaran ekstra atau deskripsi panjang.
+    # Isi tabel nilai - DINAMIS + PREDIKAT (v1.6)
     subjects = data.get('subjects', [])
     nilai_list = data.get('nilai_list', [])
     deskripsi_list = data.get('deskripsi_list', [])
     
-    # Hitung dulu semua baris yang dibutuhkan + tinggi baris aktual per row
     row_data = []
-    min_row_h = 0.85 * cm          # tinggi minimum agar tetap rapi
-    mapel_line_h = 0.255 * cm
-    desk_line_h = 0.225 * cm
-    v_padding = 0.10 * cm
+    min_row_h = 0.90 * cm
+    mapel_line_h = 0.26 * cm
+    desk_line_h = 0.23 * cm
+    v_padding = 0.12 * cm
     
     for mapel, nilai, desk in zip(subjects, nilai_list, deskripsi_list):
-        # Wrap Mata Pelajaran (dynamic, no hard cap)
+        # Wrap Mata Pelajaran
         mapel_lines = []
         words = mapel.split()
         current_line = ""
         for word in words:
             test_line = current_line + " " + word if current_line else word
-            if c.stringWidth(test_line, "Helvetica", 7.5) < mapel_width:
+            if c.stringWidth(test_line, "Helvetica", 7.5) < mapel_w:
                 current_line = test_line
             else:
                 if current_line:
@@ -507,13 +489,13 @@ def create_rapor_pdf(data, pagesize=A4):
         if current_line:
             mapel_lines.append(current_line)
         
-        # Wrap Deskripsi (dynamic, no hard cap - full content will be shown)
+        # Wrap Deskripsi (full, dynamic)
         desk_lines = []
         words = desk.split()
         current_line = ""
         for word in words:
             test_line = current_line + " " + word if current_line else word
-            if c.stringWidth(test_line, "Helvetica", 6.8) < desk_width - 0.12*cm:
+            if c.stringWidth(test_line, "Helvetica", 6.8) < desk_w - 0.1*cm:
                 current_line = test_line
             else:
                 if current_line:
@@ -522,24 +504,28 @@ def create_rapor_pdf(data, pagesize=A4):
         if current_line:
             desk_lines.append(current_line)
         
-        # Hitung tinggi yang benar-benar dibutuhkan baris ini
-        mapel_needed = len(mapel_lines) * mapel_line_h + v_padding
-        desk_needed = len(desk_lines) * desk_line_h + v_padding
-        actual_h = max(mapel_needed, desk_needed, min_row_h)
+        actual_h = max(
+            len(mapel_lines) * mapel_line_h + v_padding,
+            len(desk_lines) * desk_line_h + v_padding,
+            min_row_h
+        )
+        
+        predikat = get_predikat(nilai, kkm)
         
         row_data.append({
             'mapel_lines': mapel_lines,
             'desk_lines': desk_lines,
             'nilai': nilai,
+            'predikat': predikat,
             'height': actual_h
         })
     
-    # Mulai menggambar baris data (setelah header tabel)
+    # Mulai menggambar baris data
     table_data_top = y
     for idx, rd in enumerate(row_data):
         actual_row_h = rd['height']
         
-        # Background selang-seling (menggunakan row_alt_color dari tema)
+        # Background selang-seling
         if idx % 2 == 0:
             c.setFillColor(colors.HexColor(row_alt_color))
             c.rect(left_margin, y - actual_row_h + 0.08*cm, usable_width, actual_row_h, fill=1, stroke=0)
@@ -548,43 +534,65 @@ def create_rapor_pdf(data, pagesize=A4):
         
         # No
         c.setFont("Helvetica", 7.5)
-        c.drawCentredString(col_no + 0.25*cm, y - 0.28*cm, str(idx + 1))
+        c.drawCentredString(col_no_x + 0.28*cm, y - 0.30*cm, str(idx + 1))
         
-        # Mata Pelajaran (semua baris ditampilkan, tidak dibatasi)
-        mapel_y = y - 0.20*cm
+        # Mata Pelajaran
+        mapel_y = y - 0.22*cm
         for line in rd['mapel_lines']:
-            c.drawString(col_mapel, mapel_y, line)
+            c.drawString(col_mapel_x, mapel_y, line)
             mapel_y -= mapel_line_h
         
-        # Nilai
+        # Nilai Akhir
         c.setFont("Helvetica-Bold", 9)
-        c.drawCentredString(col_nilai + 0.6*cm, y - 0.42*cm, str(rd['nilai']))
+        c.drawCentredString(col_nilai_x + nilai_w/2, y - 0.45*cm, str(rd['nilai']))
         
-        # Deskripsi (semua baris ditampilkan - tidak ada yang terpotong lagi!)
+        # PREDIKAT (A/B/C/D) dengan warna performa
+        c.setFont("Helvetica-Bold", 9)
+        if rd['predikat'] == "A":
+            c.setFillColor(colors.HexColor("#1e8449"))
+        elif rd['predikat'] == "B":
+            c.setFillColor(colors.HexColor("#117a65"))
+        elif rd['predikat'] == "C":
+            c.setFillColor(colors.HexColor("#b7950b"))
+        else:
+            c.setFillColor(colors.HexColor("#922b21"))
+        c.drawCentredString(col_pred_x + pred_w/2, y - 0.45*cm, rd['predikat'])
+        c.setFillColor(colors.black)
+        
+        # Deskripsi
         c.setFont("Helvetica", 6.8)
-        desk_y = y - 0.16*cm
+        desk_y = y - 0.18*cm
         for line in rd['desk_lines']:
-            c.drawString(col_desk, desk_y, line.strip())
+            c.drawString(col_desk_x, desk_y, line.strip())
             desk_y -= desk_line_h
+        
+        # Garis bawah hijau pada deskripsi pertama jika nilai bagus (>= kkm+5)
+        # Ini mewujudkan "kata-kata bergaris pada Capaian Kompetensi sesuai nilai"
+        if rd['nilai'] >= kkm + 5 and len(rd['desk_lines']) > 0:
+            first_line = rd['desk_lines'][0]
+            first_w = c.stringWidth(first_line, "Helvetica", 6.8)
+            underline_y = (y - 0.18*cm) - 0.03*cm
+            c.setStrokeColor(colors.HexColor("#27ae60"))
+            c.setLineWidth(0.7)
+            c.line(col_desk_x, underline_y, col_desk_x + min(first_w + 0.1*cm, desk_w - 0.15*cm), underline_y)
+            c.setLineWidth(0.4)
         
         y -= actual_row_h
     
-    # Border tabel + garis vertikal (lebih rapi & tegas)
+    # Border tabel utama (tegas, profesional)
     c.setStrokeColor(colors.HexColor(primary_color))
-    c.setLineWidth(1.2)  # Lebih tebal untuk kesan rapi
-    table_height = table_data_top - y + 0.50*cm
+    c.setLineWidth(1.3)
+    table_height = table_data_top - y + 0.55*cm
     c.rect(left_margin, y, usable_width, table_height, fill=0, stroke=1)
     
-    # Garis dalam tabel lebih halus
-    c.setLineWidth(0.5)
+    # Garis vertikal pemisah kolom (posisi presisi + gap 0.12cm dari teks)
+    c.setLineWidth(0.55)
+    c.line(col_mapel_x - 0.12*cm, y, col_mapel_x - 0.12*cm, table_data_top + 0.55*cm)
+    c.line(col_nilai_x - 0.12*cm, y, col_nilai_x - 0.12*cm, table_data_top + 0.55*cm)
+    c.line(col_pred_x - 0.12*cm, y, col_pred_x - 0.12*cm, table_data_top + 0.55*cm)
+    c.line(col_desk_x - 0.12*cm, y, col_desk_x - 0.12*cm, table_data_top + 0.55*cm)
     
-    # Garis vertikal pemisah antar kolom (menyesuaikan tinggi tabel yang sebenarnya)
-    c.setLineWidth(0.4)
-    c.line(col_mapel - 0.05*cm, y, col_mapel - 0.05*cm, table_data_top + 0.50*cm)
-    c.line(col_nilai - 0.15*cm, y, col_nilai - 0.15*cm, table_data_top + 0.50*cm)
-    c.line(col_desk - 0.10*cm, y, col_desk - 0.10*cm, table_data_top + 0.50*cm)
-    
-    y -= 0.45*cm
+    y -= 0.50*cm
     
     # ========== B/C. CAPAIAN PEMBELAJARAN (CP) & TUJUAN PEMBELAJARAN (TP) (opsional) ==========
     cp_tp = data.get('cp_tp_ringkasan', '').strip()
