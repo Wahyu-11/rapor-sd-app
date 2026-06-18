@@ -199,20 +199,6 @@ def create_rapor_pdf(data):
     
     y = height - top_margin
     
-    # ========== LOGO SEKOLAH (opsional) ==========
-    logo_bytes = data.get('logo_bytes')
-    if logo_bytes:
-        try:
-            logo_reader = ImageReader(BytesIO(logo_bytes))
-            logo_w = 2.0 * cm
-            logo_h = 2.0 * cm
-            # Posisi pojok kiri atas (di atas / overlay header biru)
-            c.drawImage(logo_reader, left_margin, height - 2.65*cm,
-                        width=logo_w, height=logo_h,
-                        preserveAspectRatio=True, mask='auto')
-        except Exception:
-            pass  # abaikan logo jika file rusak atau format tidak didukung
-    
     # ========== HEADER ==========
     # Kotak header
     c.setFillColor(colors.HexColor("#1a5276"))
@@ -240,6 +226,20 @@ def create_rapor_pdf(data):
     c.setFillColor(colors.black)
     c.drawCentredString(width/2, y, f"NPSN: {data.get('npsn', '-')} | {data.get('alamat_sekolah', '')}")
     y -= 0.7*cm
+    
+    # ========== LOGO SEKOLAH (opsional) - digambar setelah header agar tidak tertutup ==========
+    logo_bytes = data.get('logo_bytes')
+    if logo_bytes:
+        try:
+            logo_reader = ImageReader(BytesIO(logo_bytes))
+            logo_w = 2.0 * cm
+            logo_h = 2.0 * cm
+            # Posisi pojok kiri atas, overlay di area header biru sebelah kiri
+            c.drawImage(logo_reader, left_margin + 0.3*cm, height - 2.55*cm,
+                        width=logo_w, height=logo_h,
+                        preserveAspectRatio=True, mask='auto')
+        except Exception:
+            pass  # abaikan jika logo bermasalah
     
     # Garis pemisah
     c.setStrokeColor(colors.HexColor("#1a5276"))
@@ -906,6 +906,14 @@ with tab1:
         st.session_state.last_kelas = kelas
         st.session_state.last_agama = agama
     
+    # Inisialisasi mata pelajaran tambahan (bisa ditambah/hapus oleh user)
+    if 'extra_subjects' not in st.session_state:
+        st.session_state.extra_subjects = []
+    if 'extra_nilai' not in st.session_state:
+        st.session_state.extra_nilai = {}
+    if 'extra_deskripsi' not in st.session_state:
+        st.session_state.extra_deskripsi = {}
+    
     nilai_list = []
     deskripsi_list = []
     
@@ -964,6 +972,76 @@ with tab1:
         st.rerun()
     
     st.info("💡 Deskripsi sudah disesuaikan dengan level nilai dan mata pelajaran. Anda bebas mengedit untuk lebih akurat.")
+    
+    # ========== FITUR TAMBAH / HAPUS MATA PELAJARAN (BARU) ==========
+    with st.expander("➕ Tambah / Hapus Mata Pelajaran Tambahan (Opsional)", expanded=False):
+        st.caption("Gunakan fitur ini jika ada mata pelajaran tambahan di luar standar Kurikulum Merdeka untuk kelas tersebut (misalnya Muatan Lokal khusus atau kegiatan unggulan sekolah).")
+        
+        col_add1, col_add2 = st.columns([0.7, 0.3])
+        with col_add1:
+            new_mapel_name = st.text_input("Nama Mata Pelajaran Baru", placeholder="Contoh: Bahasa Daerah / Keterampilan", key="new_mapel_input")
+        with col_add2:
+            if st.button("➕ Tambah Mapel", type="secondary", use_container_width=True):
+                if new_mapel_name.strip() and new_mapel_name.strip() not in st.session_state.extra_subjects:
+                    st.session_state.extra_subjects.append(new_mapel_name.strip())
+                    st.session_state.extra_nilai[new_mapel_name.strip()] = 75
+                    st.session_state.extra_deskripsi[new_mapel_name.strip()] = generate_deskripsi_otomatis(nama_siswa, new_mapel_name.strip(), 75)
+                    st.rerun()
+                elif new_mapel_name.strip() in st.session_state.extra_subjects:
+                    st.warning("Mata pelajaran sudah ada!")
+        
+        if st.session_state.extra_subjects:
+            st.markdown("**Mata Pelajaran Tambahan yang Sudah Ditambahkan:**")
+            for idx, extra_mapel in enumerate(st.session_state.extra_subjects):
+                with st.container(border=True):
+                    col_e1, col_e2, col_e3 = st.columns([0.55, 0.25, 0.2])
+                    with col_e1:
+                        extra_nilai_val = st.number_input(
+                            f"Nilai {extra_mapel}", 
+                            min_value=0, max_value=100, 
+                            value=st.session_state.extra_nilai.get(extra_mapel, 75),
+                            key=f"extra_nilai_{idx}"
+                        )
+                        st.session_state.extra_nilai[extra_mapel] = extra_nilai_val
+                        
+                        # Predikat otomatis untuk extra
+                        if extra_nilai_val >= 90:
+                            extra_pred = "A"
+                        elif extra_nilai_val >= 80:
+                            extra_pred = "B"
+                        elif extra_nilai_val >= 70:
+                            extra_pred = "C"
+                        else:
+                            extra_pred = "D"
+                        st.caption(f"Predikat: **{extra_pred}**")
+                    
+                    with col_e2:
+                        extra_desk = st.text_area(
+                            f"Deskripsi {extra_mapel}", 
+                            value=st.session_state.extra_deskripsi.get(extra_mapel, ""),
+                            height=60,
+                            key=f"extra_desk_{idx}"
+                        )
+                        st.session_state.extra_deskripsi[extra_mapel] = extra_desk
+                    
+                    with col_e3:
+                        if st.button("🗑️ Hapus", key=f"del_extra_{idx}", type="secondary"):
+                            # Hapus dari semua storage
+                            if extra_mapel in st.session_state.extra_subjects:
+                                st.session_state.extra_subjects.remove(extra_mapel)
+                            if extra_mapel in st.session_state.extra_nilai:
+                                del st.session_state.extra_nilai[extra_mapel]
+                            if extra_mapel in st.session_state.extra_deskripsi:
+                                del st.session_state.extra_deskripsi[extra_mapel]
+                            st.rerun()
+    
+    # Gabungkan mata pelajaran tambahan ke daftar utama (untuk PDF & generate)
+    final_subjects = subjects.copy()
+    for extra_mapel in st.session_state.extra_subjects:
+        if extra_mapel not in final_subjects:  # hindari duplikat
+            final_subjects.append(extra_mapel)
+            nilai_list.append(st.session_state.extra_nilai.get(extra_mapel, 75))
+            deskripsi_list.append(st.session_state.extra_deskripsi.get(extra_mapel, ""))
     
     # === CAPAIAN PEMBELAJARAN (CP) & TUJUAN PEMBELAJARAN (TP) - BARU ===
     st.markdown('<div class="section-header">🎯 CAPAIAN PEMBELAJARAN (CP) & TUJUAN PEMBELAJARAN (TP)</div>', unsafe_allow_html=True)
@@ -1030,7 +1108,7 @@ with tab1:
                     'semester': semester,
                     'tahun_ajaran': tahun_ajaran,
                     'agama': agama,
-                    'subjects': subjects,
+                    'subjects': final_subjects,
                     'nilai_list': nilai_list,
                     'deskripsi_list': deskripsi_list,
                     'sakit': sakit,
