@@ -16,6 +16,7 @@ from reportlab.platypus import Paragraph
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY, TA_RIGHT
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.utils import ImageReader
 from io import BytesIO
 from datetime import datetime
 from PIL import Image
@@ -169,6 +170,21 @@ def generate_deskripsi_otomatis(nama_lengkap, mapel, nilai):
     )
     return deskripsi
 
+
+# ==================== KETERANGAN MATA PELAJARAN (untuk bantuan input nilai) ====================
+SUBJECT_KETERANGAN = {
+    "Pendidikan Agama": "Membentuk karakter religius, pemahaman ajaran agama, ibadah, dan akhlak mulia sesuai keyakinan siswa.",
+    "Pendidikan Pancasila": "Mengembangkan pemahaman & pengamalan nilai-nilai Pancasila, karakter bangsa, dan kehidupan bermasyarakat yang demokratis.",
+    "Bahasa Indonesia": "Melatih 4 keterampilan berbahasa (menyimak, berbicara, membaca, menulis) serta menghargai sastra dan budaya Indonesia.",
+    "Matematika": "Mengembangkan kemampuan berpikir logis, pemecahan masalah, konsep bilangan, geometri, pengukuran, dan statistika dasar.",
+    "Ilmu Pengetahuan Alam dan Sosial (IPAS)": "Mengenal konsep IPA & IPS secara terpadu, mengembangkan keterampilan berpikir ilmiah, observasi, dan kesadaran sosial-lingkungan.",
+    "Pendidikan Jasmani, Olahraga dan Kesehatan (PJOK)": "Mengembangkan kebugaran jasmani, keterampilan gerak dasar, sportivitas, kerja sama tim, dan gaya hidup sehat.",
+    "Seni Budaya": "Mengekspresikan kreativitas melalui seni rupa, musik, tari, dan teater serta menghargai keberagaman seni budaya Nusantara.",
+    "Bahasa Inggris": "Mengenal kosakata dasar, kalimat sederhana, listening & speaking untuk berkomunikasi dalam konteks kehidupan sehari-hari.",
+    "Muatan Lokal": "Mempelajari dan melestarikan bahasa daerah, budaya, tradisi, serta kearifan lokal sesuai potensi daerah masing-masing.",
+}
+
+
 def create_rapor_pdf(data):
     """Generate PDF Rapor menggunakan reportlab canvas (layout profesional & rapi)"""
     buffer = BytesIO()
@@ -182,6 +198,20 @@ def create_rapor_pdf(data):
     usable_width = width - left_margin - right_margin
     
     y = height - top_margin
+    
+    # ========== LOGO SEKOLAH (opsional) ==========
+    logo_bytes = data.get('logo_bytes')
+    if logo_bytes:
+        try:
+            logo_reader = ImageReader(BytesIO(logo_bytes))
+            logo_w = 2.0 * cm
+            logo_h = 2.0 * cm
+            # Posisi pojok kiri atas (di atas / overlay header biru)
+            c.drawImage(logo_reader, left_margin, height - 2.65*cm,
+                        width=logo_w, height=logo_h,
+                        preserveAspectRatio=True, mask='auto')
+        except Exception:
+            pass  # abaikan logo jika file rusak atau format tidak didukung
     
     # ========== HEADER ==========
     # Kotak header
@@ -645,11 +675,12 @@ def create_excel_template():
     return output.getvalue()
 
 
-def process_batch_excel(df, nama_sekolah="SD Negeri Contoh", npsn="00000000", alamat_sekolah="", kota="Kota Contoh"):
+def process_batch_excel(df, nama_sekolah="SD Negeri Contoh", npsn="00000000", alamat_sekolah="", kota="Kota Contoh", logo_bytes=None):
     """
     Memproses DataFrame dari Excel dan menghasilkan ZIP berisi semua PDF rapor.
     Menggunakan auto-generate deskripsi berdasarkan nilai.
     School identity diambil dari parameter UI batch (sama untuk semua siswa).
+    logo_bytes: bytes dari file logo yang sama untuk semua rapor (opsional).
     """
     zip_buffer = BytesIO()
     
@@ -683,6 +714,7 @@ def process_batch_excel(df, nama_sekolah="SD Negeri Contoh", npsn="00000000", al
                     'semester': semester,
                     'tahun_ajaran': tahun_ajaran,
                     'agama': agama,
+                    'logo_bytes': logo_bytes,
                 }
                 
                 # Bangun daftar mapel & nilai berdasarkan kelas
@@ -829,6 +861,13 @@ with tab1:
         alamat_sekolah = st.text_input("Alamat Sekolah", value="Jl. Pendidikan No. 1, Kota Contoh", key="alamat")
         kota = st.text_input("Kota/Kabupaten", value="Kota Contoh", key="kota")
     
+    # Logo upload (opsional) - akan muncul di pojok kiri atas PDF
+    logo_file = st.file_uploader(
+        "🖼️ Upload Logo Sekolah (PNG / JPG, opsional)", 
+        type=["png", "jpg", "jpeg"],
+        help="Logo akan ditampilkan di pojok kiri atas halaman rapor. Gunakan logo resmi sekolah dengan background transparan atau putih untuk hasil terbaik. Ukuran ideal: persegi."
+    )
+    
     # === IDENTITAS SISWA ===
     st.markdown('<div class="section-header">👤 IDENTITAS PESERTA DIDIK</div>', unsafe_allow_html=True)
     
@@ -911,6 +950,11 @@ with tab1:
                     help="Edit sesuai observasi nyata siswa. Bahasa sudah positif & memotivasi."
                 )
                 deskripsi_list.append(deskripsi)
+            
+            # Keterangan singkat mata pelajaran (di bawah kolom)
+            mapel_key = next((k for k in SUBJECT_KETERANGAN.keys() if k in mapel), None)
+            if mapel_key:
+                st.caption(f"ℹ️ **{mapel_key}**: {SUBJECT_KETERANGAN[mapel_key]}")
     
     # Tombol regenerate semua deskripsi
     if st.button("🔄 Regenerate Semua Deskripsi Otomatis", type="secondary"):
@@ -999,6 +1043,7 @@ with tab1:
                     'nip_kepala': nip_kepala,
                     'tempat_tanggal': tempat_tanggal,
                     'cp_tp_ringkasan': cp_tp_ringkasan,
+                    'logo_bytes': logo_file.getvalue() if logo_file else None,
                 }
                 
                 pdf_bytes = create_rapor_pdf(data)
@@ -1035,6 +1080,14 @@ with tab2:
         with col2:
             batch_alamat = st.text_input("Alamat Sekolah", value="Jl. Pendidikan No. 1", key="batch_alamat")
             batch_kota = st.text_input("Kota/Kabupaten", value="Kota Contoh", key="batch_kota")
+        
+        # Logo untuk batch (sama untuk semua siswa)
+        batch_logo_file = st.file_uploader(
+            "🖼️ Upload Logo Sekolah untuk semua rapor dalam batch ini (opsional)", 
+            type=["png", "jpg", "jpeg"],
+            key="batch_logo",
+            help="Logo yang sama akan muncul di setiap PDF rapor yang dihasilkan."
+        )
     
     # Tombol download template
     if st.button("📥 DOWNLOAD TEMPLATE EXCEL SIAP PAKAI", type="primary", use_container_width=True):
@@ -1076,7 +1129,8 @@ with tab2:
                         nama_sekolah=batch_nama_sekolah,
                         npsn=batch_npsn,
                         alamat_sekolah=batch_alamat,
-                        kota=batch_kota
+                        kota=batch_kota,
+                        logo_bytes=batch_logo_file.getvalue() if batch_logo_file else None
                     )
                 
                 st.success(f"🎉 Selesai! **{success_count}** rapor berhasil dibuat.")
