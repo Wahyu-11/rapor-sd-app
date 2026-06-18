@@ -142,34 +142,82 @@ def get_subjects(kelas, agama_label, muatan_lokal_name="Muatan Lokal"):
     subjects.append(muatan_lokal_name)
     return subjects
 
-def generate_deskripsi_otomatis(nama_lengkap, mapel, nilai):
-    """Generate deskripsi capaian kompetensi yang positif, memotivasi, dan sesuai Kurikulum Merdeka"""
+def generate_deskripsi_otomatis(nama_lengkap, mapel, nilai, kkm=70):
+    """Generate deskripsi capaian kompetensi yang positif, memotivasi, dan sesuai Kurikulum Merdeka.
+    Deskripsi dibedakan antara nilai tinggi (di atas KKM) dan nilai rendah (di bawah KKM)."""
     if not nama_lengkap:
         nama_depan = "Ananda"
     else:
         nama_depan = nama_lengkap.split()[0].capitalize()
     
-    # Level berdasarkan nilai
-    if nilai >= 95:
-        level = "sangat baik sekali"
-        capaian = "telah mencapai dan melampaui semua kompetensi yang diharapkan dengan sangat baik"
-        saran = "Terus kembangkan potensi luar biasa ini dengan konsisten dan mandiri."
-    elif nilai >= 85:
+    # Level & kata-kata disesuaikan dengan KKM (nilai tinggi vs rendah)
+    selisih = nilai - kkm
+    
+    if nilai >= kkm + 20:          # Sangat tinggi
+        level = "sangat baik sekali dan membanggakan"
+        capaian = "telah melampaui semua kompetensi yang diharapkan dengan sangat baik dan konsisten"
+        saran = "Terus pertahankan prestasi gemilang ini! Ananda memiliki potensi untuk menjadi teladan bagi teman-teman."
+    elif nilai >= kkm + 10:        # Tinggi
         level = "sangat baik"
-        capaian = "telah mencapai kompetensi yang diharapkan dengan sangat baik"
-        saran = "Pertahankan prestasi ini dan tingkatkan lagi kemampuan analisis serta kreativitas."
-    elif nilai >= 75:
+        capaian = "telah mencapai dan melampaui kompetensi yang diharapkan dengan sangat baik"
+        saran = "Pertahankan semangat belajar ini dan terus kembangkan kemampuan berpikir kritis serta kreativitas."
+    elif nilai >= kkm:             # Di atas / sama dengan KKM
         level = "baik"
         capaian = "telah mencapai sebagian besar kompetensi yang diharapkan dengan baik"
-        saran = "Terus berlatih dan aktif bertanya untuk memperdalam pemahaman."
-    elif nilai >= 65:
+        saran = "Terus berlatih dan aktif bertanya agar pemahaman semakin mendalam di semester berikutnya."
+    elif nilai >= kkm - 10:        # Sedikit di bawah KKM
         level = "cukup"
-        capaian = "telah mencapai kompetensi dasar yang diharapkan"
-        saran = "Perlu meningkatkan latihan mandiri dan memanfaatkan bimbingan guru/orang tua."
+        capaian = "telah menunjukkan perkembangan yang positif meskipun masih perlu sedikit bimbingan"
+        saran = "Dengan latihan tambahan dan bimbingan guru/orang tua, Ananda pasti akan segera mencapai KKM."
+    else:                          # Jauh di bawah KKM
+        level = "masih dalam tahap berkembang"
+        capaian = "sedang berusaha mencapai kompetensi dasar yang diharapkan"
+        saran = "Jangan menyerah! Setiap usaha kecil akan membawa Ananda semakin dekat ke keberhasilan. Guru dan orang tua siap membantu."
+    
+    # Spesifik per mata pelajaran (ringkas & relevan) - tetap sama
+    mapel_lower = mapel.lower()
+    if "agama" in mapel_lower:
+        specific = "memahami dan mengamalkan ajaran agama serta nilai-nilai budi pekerti dalam kehidupan sehari-hari"
+        contoh = "Ananda sudah mampu melaksanakan ibadah dengan khusyuk dan menunjukkan sikap toleransi."
+    elif "pancasila" in mapel_lower:
+        specific = "memahami dan mengamalkan nilai-nilai Pancasila dalam kehidupan bermasyarakat"
+        contoh = "Ananda mampu menyebutkan sila-sila Pancasila dan memberikan contoh penerapannya di sekolah dan rumah."
+    elif "bahasa indonesia" in mapel_lower:
+        specific = "keterampilan berbahasa Indonesia (membaca, menulis, menyimak, dan berbicara)"
+        contoh = "Ananda sudah lancar membaca teks dan menulis paragraf sederhana dengan ejaan yang tepat."
+    elif "matematika" in mapel_lower:
+        specific = "pemahaman konsep bilangan, operasi hitung, geometri, dan pemecahan masalah"
+        contoh = "Ananda mampu menyelesaikan soal cerita dan menggambar bangun datar dengan akurat."
+    elif "ipas" in mapel_lower or "pengetahuan alam" in mapel_lower:
+        specific = "memahami konsep IPA dan IPS serta keterampilan berpikir ilmiah dan sosial"
+        contoh = "Ananda mampu mengamati fenomena alam sekitar dan menjelaskan hubungan sebab-akibat sederhana."
+    elif "jasmani" in mapel_lower or "pjok" in mapel_lower:
+        specific = "keterampilan gerak dasar, kebugaran jasmani, dan sportivitas"
+        contoh = "Ananda aktif berpartisipasi dalam permainan dan menunjukkan sikap kerja sama yang baik."
+    elif "seni" in mapel_lower:
+        specific = "ekspresi kreatif melalui seni rupa, musik, tari, atau teater"
+        contoh = "Ananda mampu mengekspresikan ide melalui karya seni dan menikmati berbagai bentuk seni budaya."
+    elif "inggris" in mapel_lower:
+        specific = "keterampilan dasar berbahasa Inggris (vocabulary, simple sentences, listening & speaking)"
+        contoh = "Ananda sudah mampu memperkenalkan diri dan menyebutkan benda-benda di sekitarnya dalam bahasa Inggris sederhana."
+    else:  # Muatan Lokal
+        specific = "pemahaman dan pelestarian budaya serta kearifan lokal daerah"
+        contoh = "Ananda menunjukkan antusiasme dalam mempelajari bahasa dan tradisi daerah."
+    
+    # Buat deskripsi final (lebih variatif)
+    if nilai >= kkm:
+        deskripsi = (
+            f"{nama_depan} menunjukkan perkembangan {level} dalam {specific}. "
+            f"Ananda {capaian}. {contoh} {saran} "
+            f"Semangat terus, Ananda telah berhasil mencapai standar ketuntasan!"
+        )
     else:
-        level = "perlu bimbingan lebih lanjut"
-        capaian = "sedang dalam proses mencapai kompetensi yang diharapkan"
-        saran = "Jangan menyerah! Dengan latihan rutin dan bimbingan, Ananda pasti bisa lebih baik."
+        deskripsi = (
+            f"{nama_depan} menunjukkan perkembangan {level} dalam {specific}. "
+            f"Ananda {capaian}. {contoh} {saran} "
+            f"Dengan usaha yang konsisten, Ananda pasti akan segera tuntas dan berkembang lebih optimal!"
+        )
+    return deskripsi
     
     # Spesifik per mata pelajaran (ringkas & relevan)
     mapel_lower = mapel.lower()
@@ -241,6 +289,7 @@ def create_rapor_pdf(data, pagesize=A4):
     table_header_bg = data.get('table_header_bg', '#d5dbdb')
     row_alt_color = data.get('row_alt_color', '#f8f9f9')
     page_bg_color = data.get('page_bg_color', '#FFFFFF')
+    kkm = data.get('kkm', 70)
     
     # Background halaman opsional (sangat direkomendasikan warna terang seperti #F8F9FA atau #FFFFFF)
     # Berguna untuk tampilan digital yang lebih menarik; untuk cetak gunakan #FFFFFF
@@ -402,7 +451,7 @@ def create_rapor_pdf(data, pagesize=A4):
     # ========== A. NILAI DAN CAPAIAN KOMPETENSI ==========
     c.setFillColor(colors.HexColor(primary_color))
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(left_margin, y, "A. NILAI DAN CAPAIAN KOMPETENSI")
+    c.drawString(left_margin, y, f"A. NILAI DAN CAPAIAN KOMPETENSI  |  KKM: {kkm}")
     y -= 0.5*cm
     
     # Header tabel (menggunakan table_header_bg dari tema)
@@ -520,11 +569,14 @@ def create_rapor_pdf(data, pagesize=A4):
         
         y -= actual_row_h
     
-    # Border tabel + garis vertikal (tinggi disesuaikan dengan konten aktual)
+    # Border tabel + garis vertikal (lebih rapi & tegas)
     c.setStrokeColor(colors.HexColor(primary_color))
-    c.setLineWidth(0.8)
-    table_height = table_data_top - y + 0.50*cm   # tinggi total data rows + sedikit padding header
+    c.setLineWidth(1.2)  # Lebih tebal untuk kesan rapi
+    table_height = table_data_top - y + 0.50*cm
     c.rect(left_margin, y, usable_width, table_height, fill=0, stroke=1)
+    
+    # Garis dalam tabel lebih halus
+    c.setLineWidth(0.5)
     
     # Garis vertikal pemisah antar kolom (menyesuaikan tinggi tabel yang sebenarnya)
     c.setLineWidth(0.4)
@@ -1121,6 +1173,18 @@ with tab1:
     # === MATA PELAJARAN & NILAI ===
     st.markdown('<div class="section-header">📊 NILAI AKHIR & CAPAIAN KOMPETENSI</div>', unsafe_allow_html=True)
     
+    # Input KKM (global untuk rapor ini)
+    col_kkm1, col_kkm2 = st.columns([0.4, 0.6])
+    with col_kkm1:
+        kkm = st.number_input(
+            "KKM (Kriteria Ketuntasan Minimal)", 
+            min_value=50, max_value=100, value=70, step=5,
+            key="kkm_input",
+            help="Nilai minimal yang harus dicapai siswa untuk dinyatakan tuntas pada mata pelajaran."
+        )
+    with col_kkm2:
+        st.caption("Predikat dan status ketuntasan akan disesuaikan berdasarkan KKM ini. Contoh: Jika KKM=70, nilai ≥85 biasanya mendapat predikat B atau A.")
+    
     agama_label = agama
     subjects = get_subjects(kelas, agama_label, muatan_lokal_nama)
     
@@ -1160,20 +1224,20 @@ with tab1:
                 nilai_list.append(nilai)
                 st.session_state.nilai_data[mapel] = nilai
                 
-                # Predikat otomatis
-                if nilai >= 90:
+                # Predikat otomatis berdasarkan KKM
+                if nilai >= kkm + 15:
                     predikat = "A (Sangat Baik)"
-                elif nilai >= 80:
+                elif nilai >= kkm:
                     predikat = "B (Baik)"
-                elif nilai >= 70:
+                elif nilai >= kkm - 10:
                     predikat = "C (Cukup)"
                 else:
                     predikat = "D (Perlu Bimbingan)"
-                st.caption(f"Predikat: **{predikat}**")
+                st.caption(f"Predikat: **{predikat}** | KKM: {kkm}")
             
             with col_desk:
                 # Generate atau edit deskripsi
-                default_desk = generate_deskripsi_otomatis(nama_siswa, mapel, nilai)
+                default_desk = generate_deskripsi_otomatis(nama_siswa, mapel, nilai, kkm)
                 if mapel not in st.session_state.nilai_data:
                     st.session_state.nilai_data[mapel] = nilai
                 
@@ -1194,7 +1258,7 @@ with tab1:
     # Tombol regenerate semua deskripsi
     if st.button("🔄 Regenerate Semua Deskripsi Otomatis", type="secondary"):
         for i, mapel in enumerate(subjects):
-            new_desk = generate_deskripsi_otomatis(nama_siswa, mapel, nilai_list[i])
+            new_desk = generate_deskripsi_otomatis(nama_siswa, mapel, nilai_list[i], kkm)
             st.session_state[f"desk_{i}"] = new_desk
         st.rerun()
     
@@ -1212,7 +1276,7 @@ with tab1:
                 if new_mapel_name.strip() and new_mapel_name.strip() not in st.session_state.extra_subjects:
                     st.session_state.extra_subjects.append(new_mapel_name.strip())
                     st.session_state.extra_nilai[new_mapel_name.strip()] = 75
-                    st.session_state.extra_deskripsi[new_mapel_name.strip()] = generate_deskripsi_otomatis(nama_siswa, new_mapel_name.strip(), 75)
+                    st.session_state.extra_deskripsi[new_mapel_name.strip()] = generate_deskripsi_otomatis(nama_siswa, new_mapel_name.strip(), 75, kkm)
                     st.rerun()
                 elif new_mapel_name.strip() in st.session_state.extra_subjects:
                     st.warning("Mata pelajaran sudah ada!")
@@ -1231,16 +1295,16 @@ with tab1:
                         )
                         st.session_state.extra_nilai[extra_mapel] = extra_nilai_val
                         
-                        # Predikat otomatis untuk extra
-                        if extra_nilai_val >= 90:
+                        # Predikat otomatis untuk extra (berdasarkan KKM)
+                        if extra_nilai_val >= kkm + 15:
                             extra_pred = "A"
-                        elif extra_nilai_val >= 80:
+                        elif extra_nilai_val >= kkm:
                             extra_pred = "B"
-                        elif extra_nilai_val >= 70:
+                        elif extra_nilai_val >= kkm - 10:
                             extra_pred = "C"
                         else:
                             extra_pred = "D"
-                        st.caption(f"Predikat: **{extra_pred}**")
+                        st.caption(f"Predikat: **{extra_pred}** | KKM: {kkm}")
                     
                     with col_e2:
                         extra_desk = st.text_area(
@@ -1381,6 +1445,7 @@ with tab1:
                     'table_header_bg': st.session_state.get('table_header_bg', '#d5dbdb'),
                     'row_alt_color': st.session_state.get('row_alt_color', '#f8f9f9'),
                     'page_bg_color': st.session_state.get('page_bg_color', '#FFFFFF'),
+                    'kkm': kkm,
                 }
                 
                 pdf_bytes = create_rapor_pdf(data, pagesize=selected_pagesize)
