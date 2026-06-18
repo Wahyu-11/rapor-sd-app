@@ -26,12 +26,17 @@ Aplikasi web sederhana berbasis **Streamlit** untuk membuat Rapor Peserta Didik 
 - Label dan nilai dipisahkan sehingga tidak lagi bergantung pada padding spasi (yang tidak akurat di font proporsional seperti Helvetica). 
 - Hasil: tampilan lebih profesional, rapi, dan mudah dibaca — persis seperti formulir rapor resmi.
 
-**Update v1.3 (Muatan Lokal fleksibel - Juni 2026):** 
+**Update v1.3 (Muatan Lokal fleksibel + PDF Lebih Pintar - Juni 2026):** 
 - Menambahkan **pilihan nama Muatan Lokal** yang bisa disesuaikan langsung di UI (Single Student & Batch Excel). 
 - Sekarang guru bisa mengganti label "Muatan Lokal" menjadi nama spesifik sesuai daerah/sekolah, misalnya: **Bahasa Jawa**, **Bahasa Sunda**, **Budaya Betawi**, **Seni Tradisi Lokal**, **Kearifan Lokal**, dll.
 - Nilai tetap diinput di kolom yang sama (atau field nilai), deskripsi otomatis tetap relevan (fokus pelestarian budaya & kearifan daerah).
 - Fitur ini memudahkan sekolah yang memiliki Muatan Lokal khusus tanpa perlu menambah mapel manual setiap kali.
 - Batch Excel tetap kompatibel (gunakan kolom Nilai_Muatan_Lokal untuk nilainya).
+
+**Perbaikan PDF Penting (v1.3):**
+- **Tabel Nilai sekarang 100% anti-potong**: Ketika Anda menambahkan mata pelajaran ekstra via fitur "➕ Tambah Mapel", tinggi setiap baris dihitung **otomatis & dinamis** berdasarkan jumlah baris teks aktual setelah wrapping. Tidak ada lagi teks deskripsi atau nama mapel yang terpotong/hilang, border tabel & garis vertikal menyesuaikan sempurna.
+- **Pilihan Ukuran Kertas sebelum Download**: Sebelum klik tombol Generate, Anda bisa pilih **A4 (standar)** atau **F4/Folio (lebih tinggi)**. F4 memberikan ruang ekstra ~33 mm sehingga rapor tetap rapi dan lega meskipun ada 5–10 mapel tambahan.
+- Cocok untuk sekolah yang sering menambahkan mapel unggulan atau Muatan Lokal khusus.
 
 ## 📥 Cara Install & Menjalankan (5 Menit)
 

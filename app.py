@@ -187,11 +187,17 @@ SUBJECT_KETERANGAN = {
 }
 
 
-def create_rapor_pdf(data):
-    """Generate PDF Rapor menggunakan reportlab canvas (layout profesional & rapi)"""
+def create_rapor_pdf(data, pagesize=A4):
+    """Generate PDF Rapor menggunakan reportlab canvas (layout profesional & rapi)
+    
+    pagesize: A4 (standar) atau F4 (210x330mm, lebih tinggi - cocok untuk banyak mapel tambahan)
+    Perbaikan v1.3: Tabel nilai sekarang menggunakan tinggi baris DINAMIS berdasarkan jumlah baris teks aktual
+    (setelah wrapping). Tidak ada lagi teks yang terpotong/hilang meskipun menambah banyak mata pelajaran ekstra
+    atau deskripsi panjang. Border & garis vertikal menyesuaikan tinggi tabel yang sebenarnya.
+    """
     buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
+    c = canvas.Canvas(buffer, pagesize=pagesize)
+    width, height = pagesize
     
     # Margin
     left_margin = 1.5 * cm
@@ -333,27 +339,23 @@ def create_rapor_pdf(data):
     
     y -= 0.55*cm
     
-    # Isi tabel nilai
+    # Isi tabel nilai - DINAMIS (perbaikan utama v1.3)
+    # Sekarang tinggi setiap baris dihitung otomatis berdasarkan jumlah baris teks aktual setelah wrapping.
+    # Tidak ada lagi batas hard-coded [:3] atau [:5], sehingga teks tidak pernah terpotong/hilang
+    # meskipun user menambahkan banyak mata pelajaran ekstra atau deskripsi panjang.
     subjects = data.get('subjects', [])
     nilai_list = data.get('nilai_list', [])
     deskripsi_list = data.get('deskripsi_list', [])
     
-    c.setFont("Helvetica", 7.5)
-    row_height = 1.50*cm  # lebih lega untuk keterbacaan & deskripsi multi-baris
+    # Hitung dulu semua baris yang dibutuhkan + tinggi baris aktual per row
+    row_data = []
+    min_row_h = 0.85 * cm          # tinggi minimum agar tetap rapi
+    mapel_line_h = 0.255 * cm
+    desk_line_h = 0.225 * cm
+    v_padding = 0.10 * cm
     
-    for idx, (mapel, nilai, desk) in enumerate(zip(subjects, nilai_list, deskripsi_list)):
-        # Background selang-seling
-        if idx % 2 == 0:
-            c.setFillColor(colors.HexColor("#f8f9f9"))
-            c.rect(left_margin, y - row_height + 0.1*cm, usable_width, row_height, fill=1, stroke=0)
-        
-        c.setFillColor(colors.black)
-        
-        # No
-        c.drawCentredString(col_no + 0.25*cm, y - 0.3*cm, str(idx + 1))
-        
-        # Mata Pelajaran (wrap jika panjang) - gunakan mapel_width dinamis
-        c.setFont("Helvetica", 7.5)
+    for mapel, nilai, desk in zip(subjects, nilai_list, deskripsi_list):
+        # Wrap Mata Pelajaran (dynamic, no hard cap)
         mapel_lines = []
         words = mapel.split()
         current_line = ""
@@ -368,24 +370,13 @@ def create_rapor_pdf(data):
         if current_line:
             mapel_lines.append(current_line)
         
-        mapel_y = y - 0.22*cm
-        for line in mapel_lines[:3]:  # max 3 baris
-            c.drawString(col_mapel, mapel_y, line)
-            mapel_y -= 0.26*cm
-        
-        # Nilai
-        c.setFont("Helvetica-Bold", 9)
-        c.drawCentredString(col_nilai + 0.6*cm, y - 0.45*cm, str(nilai))
-        
-        # Deskripsi - wrap DINAMIS berdasarkan lebar kolom (bukan hardcoded char!)
-        # Ini memperbaiki teks yang sebelumnya overflow atau terpotong
-        c.setFont("Helvetica", 6.8)
+        # Wrap Deskripsi (dynamic, no hard cap - full content will be shown)
         desk_lines = []
         words = desk.split()
         current_line = ""
         for word in words:
             test_line = current_line + " " + word if current_line else word
-            if c.stringWidth(test_line, "Helvetica", 6.8) < desk_width - 0.15*cm:
+            if c.stringWidth(test_line, "Helvetica", 6.8) < desk_width - 0.12*cm:
                 current_line = test_line
             else:
                 if current_line:
@@ -394,26 +385,66 @@ def create_rapor_pdf(data):
         if current_line:
             desk_lines.append(current_line)
         
-        desk_y = y - 0.18*cm
-        for line in desk_lines[:5]:  # max 5 baris (lebih fleksibel)
-            c.drawString(col_desk, desk_y, line.strip())
-            desk_y -= 0.23*cm
+        # Hitung tinggi yang benar-benar dibutuhkan baris ini
+        mapel_needed = len(mapel_lines) * mapel_line_h + v_padding
+        desk_needed = len(desk_lines) * desk_line_h + v_padding
+        actual_h = max(mapel_needed, desk_needed, min_row_h)
         
-        y -= row_height
+        row_data.append({
+            'mapel_lines': mapel_lines,
+            'desk_lines': desk_lines,
+            'nilai': nilai,
+            'height': actual_h
+        })
     
-    # Border tabel + garis vertikal pemisah kolom (tampilan lebih profesional & rapi)
+    # Mulai menggambar baris data (setelah header tabel)
+    table_data_top = y
+    for idx, rd in enumerate(row_data):
+        actual_row_h = rd['height']
+        
+        # Background selang-seling
+        if idx % 2 == 0:
+            c.setFillColor(colors.HexColor("#f8f9f9"))
+            c.rect(left_margin, y - actual_row_h + 0.08*cm, usable_width, actual_row_h, fill=1, stroke=0)
+        
+        c.setFillColor(colors.black)
+        
+        # No
+        c.setFont("Helvetica", 7.5)
+        c.drawCentredString(col_no + 0.25*cm, y - 0.28*cm, str(idx + 1))
+        
+        # Mata Pelajaran (semua baris ditampilkan, tidak dibatasi)
+        mapel_y = y - 0.20*cm
+        for line in rd['mapel_lines']:
+            c.drawString(col_mapel, mapel_y, line)
+            mapel_y -= mapel_line_h
+        
+        # Nilai
+        c.setFont("Helvetica-Bold", 9)
+        c.drawCentredString(col_nilai + 0.6*cm, y - 0.42*cm, str(rd['nilai']))
+        
+        # Deskripsi (semua baris ditampilkan - tidak ada yang terpotong lagi!)
+        c.setFont("Helvetica", 6.8)
+        desk_y = y - 0.16*cm
+        for line in rd['desk_lines']:
+            c.drawString(col_desk, desk_y, line.strip())
+            desk_y -= desk_line_h
+        
+        y -= actual_row_h
+    
+    # Border tabel + garis vertikal (tinggi disesuaikan dengan konten aktual)
     c.setStrokeColor(colors.HexColor("#1a5276"))
     c.setLineWidth(0.8)
-    table_height = (len(subjects) * row_height) + 0.55*cm
+    table_height = table_data_top - y + 0.50*cm   # tinggi total data rows + sedikit padding header
     c.rect(left_margin, y, usable_width, table_height, fill=0, stroke=1)
     
-    # Garis vertikal pemisah antar kolom tabel
+    # Garis vertikal pemisah antar kolom (menyesuaikan tinggi tabel yang sebenarnya)
     c.setLineWidth(0.4)
-    c.line(col_mapel - 0.05*cm, y, col_mapel - 0.05*cm, y + table_height)
-    c.line(col_nilai - 0.15*cm, y, col_nilai - 0.15*cm, y + table_height)
-    c.line(col_desk - 0.1*cm, y, col_desk - 0.1*cm, y + table_height)
+    c.line(col_mapel - 0.05*cm, y, col_mapel - 0.05*cm, table_data_top + 0.50*cm)
+    c.line(col_nilai - 0.15*cm, y, col_nilai - 0.15*cm, table_data_top + 0.50*cm)
+    c.line(col_desk - 0.10*cm, y, col_desk - 0.10*cm, table_data_top + 0.50*cm)
     
-    y -= 0.55*cm
+    y -= 0.45*cm
     
     # ========== B/C. CAPAIAN PEMBELAJARAN (CP) & TUJUAN PEMBELAJARAN (TP) (opsional) ==========
     cp_tp = data.get('cp_tp_ringkasan', '').strip()
@@ -1101,14 +1132,37 @@ with tab1:
     tempat_tanggal = st.text_input("Tempat, Tanggal (contoh: Jakarta, 18 Juni 2026)", 
                                    value=f"{kota}, 18 Juni 2026", key="tempat_tanggal")
     
-    # === GENERATE BUTTON ===
+    # === GENERATE BUTTON + PILIHAN KERTAS (BARU v1.3) ===
     st.markdown("---")
+    
+    # Pilihan ukuran kertas sebelum generate (sangat berguna saat ada banyak mapel tambahan)
+    col_paper, col_spacer = st.columns([0.55, 0.45])
+    with col_paper:
+        paper_choice = st.radio(
+            "📄 Pilih Ukuran Kertas untuk Rapor PDF",
+            options=[
+                "A4 (210 × 297 mm) — Standar, paling umum digunakan",
+                "F4 / Folio (210 × 330 mm) — Lebih tinggi, ideal jika banyak mata pelajaran tambahan"
+            ],
+            index=0,
+            horizontal=False,
+            help="F4 memberikan ruang vertikal ekstra ~3.3 cm sehingga tabel nilai dan tanda tangan lebih lega dan tidak cramped ketika Anda menambahkan beberapa mata pelajaran ekstra."
+        )
     
     if st.button("📥 GENERATE & DOWNLOAD RAPOR PDF", type="primary", use_container_width=True):
         if not nama_siswa or not nama_sekolah:
             st.error("Nama siswa dan nama sekolah wajib diisi!")
         else:
             with st.spinner("Membuat dokumen PDF rapor..."):
+                # Tentukan pagesize berdasarkan pilihan user
+                if "F4" in paper_choice:
+                    from reportlab.lib.units import mm
+                    selected_pagesize = (210 * mm, 330 * mm)  # F4 / Legal Indonesia
+                    paper_label = "F4"
+                else:
+                    selected_pagesize = A4
+                    paper_label = "A4"
+                
                 data = {
                     'nama_sekolah': nama_sekolah,
                     'npsn': npsn,
@@ -1137,13 +1191,13 @@ with tab1:
                     'logo_bytes': logo_file.getvalue() if logo_file else None,
                 }
                 
-                pdf_bytes = create_rapor_pdf(data)
+                pdf_bytes = create_rapor_pdf(data, pagesize=selected_pagesize)
                 
-                filename = f"Rapor_{nama_siswa.replace(' ', '_')}_Kelas{kelas}_{semester.replace(' ', '')}_{tahun_ajaran.replace('/', '-')}.pdf"
+                filename = f"Rapor_{nama_siswa.replace(' ', '_')}_Kelas{kelas}_{semester.replace(' ', '')}_{tahun_ajaran.replace('/', '-')}_{paper_label}.pdf"
                 
-                st.success("✅ Rapor berhasil dibuat! Silakan unduh di bawah ini.")
+                st.success(f"✅ Rapor berhasil dibuat dalam ukuran **{paper_label}**! Silakan unduh di bawah ini.")
                 st.download_button(
-                    label="⬇️ UNDUH RAPOR PDF",
+                    label=f"⬇️ UNDUH RAPOR PDF ({paper_label})",
                     data=pdf_bytes,
                     file_name=filename,
                     mime="application/pdf",
