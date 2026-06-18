@@ -266,15 +266,17 @@ def create_rapor_pdf(data):
     c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", 8)
     
-    # Kolom lebar
-    col_no = left_margin + 0.2*cm
-    col_mapel = left_margin + 0.7*cm
-    col_nilai = left_margin + usable_width * 0.58
-    col_desk = left_margin + usable_width * 0.65
+    # Kolom lebar - proporsional & rapi (lebih banyak ruang untuk deskripsi capaian)
+    col_no = left_margin + 0.15*cm
+    col_mapel = left_margin + 0.55*cm
+    mapel_width = usable_width * 0.30
+    col_nilai = left_margin + usable_width * 0.37
+    col_desk = left_margin + usable_width * 0.46
+    desk_width = usable_width * 0.54
     
     c.drawString(col_no, y - 0.2*cm, "No")
     c.drawString(col_mapel, y - 0.2*cm, "Mata Pelajaran")
-    c.drawCentredString(col_nilai + 0.8*cm, y - 0.2*cm, "Nilai Akhir")
+    c.drawCentredString(col_nilai + 0.6*cm, y - 0.2*cm, "Nilai Akhir")
     c.drawString(col_desk, y - 0.2*cm, "Capaian Kompetensi")
     
     y -= 0.55*cm
@@ -285,7 +287,7 @@ def create_rapor_pdf(data):
     deskripsi_list = data.get('deskripsi_list', [])
     
     c.setFont("Helvetica", 7.5)
-    row_height = 1.35*cm  # tinggi baris untuk deskripsi panjang
+    row_height = 1.50*cm  # lebih lega untuk keterbacaan & deskripsi multi-baris
     
     for idx, (mapel, nilai, desk) in enumerate(zip(subjects, nilai_list, deskripsi_list)):
         # Background selang-seling
@@ -298,14 +300,14 @@ def create_rapor_pdf(data):
         # No
         c.drawCentredString(col_no + 0.25*cm, y - 0.3*cm, str(idx + 1))
         
-        # Mata Pelajaran (wrap jika panjang)
+        # Mata Pelajaran (wrap jika panjang) - gunakan mapel_width dinamis
         c.setFont("Helvetica", 7.5)
         mapel_lines = []
         words = mapel.split()
         current_line = ""
         for word in words:
             test_line = current_line + " " + word if current_line else word
-            if c.stringWidth(test_line, "Helvetica", 7.5) < usable_width * 0.52:
+            if c.stringWidth(test_line, "Helvetica", 7.5) < mapel_width:
                 current_line = test_line
             else:
                 if current_line:
@@ -314,57 +316,66 @@ def create_rapor_pdf(data):
         if current_line:
             mapel_lines.append(current_line)
         
-        mapel_y = y - 0.25*cm
+        mapel_y = y - 0.22*cm
         for line in mapel_lines[:3]:  # max 3 baris
             c.drawString(col_mapel, mapel_y, line)
-            mapel_y -= 0.28*cm
+            mapel_y -= 0.26*cm
         
         # Nilai
         c.setFont("Helvetica-Bold", 9)
-        c.drawCentredString(col_nilai + 0.8*cm, y - 0.5*cm, str(nilai))
+        c.drawCentredString(col_nilai + 0.6*cm, y - 0.45*cm, str(nilai))
         
-        # Deskripsi (gunakan Paragraph untuk wrap otomatis)
+        # Deskripsi - wrap DINAMIS berdasarkan lebar kolom (bukan hardcoded char!)
+        # Ini memperbaiki teks yang sebelumnya overflow atau terpotong
         c.setFont("Helvetica", 6.8)
-        # Potong deskripsi agar muat
-        max_chars_per_line = 78
-        desk_wrapped = []
+        desk_lines = []
         words = desk.split()
-        current = ""
-        for w in words:
-            if len(current + " " + w) < max_chars_per_line:
-                current = current + " " + w if current else w
+        current_line = ""
+        for word in words:
+            test_line = current_line + " " + word if current_line else word
+            if c.stringWidth(test_line, "Helvetica", 6.8) < desk_width - 0.15*cm:
+                current_line = test_line
             else:
-                desk_wrapped.append(current)
-                current = w
-        if current:
-            desk_wrapped.append(current)
+                if current_line:
+                    desk_lines.append(current_line)
+                current_line = word
+        if current_line:
+            desk_lines.append(current_line)
         
-        desk_y = y - 0.2*cm
-        for line in desk_wrapped[:4]:  # max 4 baris per mapel
+        desk_y = y - 0.18*cm
+        for line in desk_lines[:5]:  # max 5 baris (lebih fleksibel)
             c.drawString(col_desk, desk_y, line.strip())
-            desk_y -= 0.26*cm
+            desk_y -= 0.23*cm
         
         y -= row_height
     
-    # Border tabel
+    # Border tabel + garis vertikal pemisah kolom (tampilan lebih profesional & rapi)
     c.setStrokeColor(colors.HexColor("#1a5276"))
     c.setLineWidth(0.8)
-    c.rect(left_margin, y, usable_width, (len(subjects) * row_height) + 0.55*cm, fill=0, stroke=1)
+    table_height = (len(subjects) * row_height) + 0.55*cm
+    c.rect(left_margin, y, usable_width, table_height, fill=0, stroke=1)
     
-    y -= 0.6*cm
+    # Garis vertikal pemisah antar kolom tabel
+    c.setLineWidth(0.4)
+    c.line(col_mapel - 0.05*cm, y, col_mapel - 0.05*cm, y + table_height)
+    c.line(col_nilai - 0.15*cm, y, col_nilai - 0.15*cm, y + table_height)
+    c.line(col_desk - 0.1*cm, y, col_desk - 0.1*cm, y + table_height)
     
-    # ========== C. CAPAIAN PEMBELAJARAN (CP) & TUJUAN PEMBELAJARAN (TP) ==========
+    y -= 0.55*cm
+    
+    # ========== B/C. CAPAIAN PEMBELAJARAN (CP) & TUJUAN PEMBELAJARAN (TP) (opsional) ==========
     cp_tp = data.get('cp_tp_ringkasan', '').strip()
+    cp_shown = False
     if cp_tp and cp_tp != "":
         c.setFillColor(colors.HexColor("#1a5276"))
         c.setFont("Helvetica-Bold", 9)
-        c.drawString(left_margin, y, "C. CAPAIAN PEMBELAJARAN (CP) & TUJUAN PEMBELAJARAN (TP)")
+        c.drawString(left_margin, y, "B. CAPAIAN PEMBELAJARAN (CP) & TUJUAN PEMBELAJARAN (TP)")
         y -= 0.4*cm
         
         c.setFillColor(colors.black)
         c.setFont("Helvetica", 8)
         
-        # Wrap teks CP/TP
+        # Wrap teks CP/TP (lebar dinamis, sudah rapi)
         cp_lines = []
         words = cp_tp.split()
         current = ""
@@ -379,15 +390,17 @@ def create_rapor_pdf(data):
         
         for line in cp_lines[:6]:  # max 6 baris
             c.drawString(left_margin, y, line)
-            y -= 0.32*cm
+            y -= 0.30*cm
         
-        y -= 0.3*cm
+        y -= 0.25*cm
+        cp_shown = True
     
-    # ========== D. KETIDAKHADIRAN ==========
+    # ========== C/D. KETIDAKHADIRAN ==========
     c.setFillColor(colors.HexColor("#1a5276"))
     c.setFont("Helvetica-Bold", 9)
-    c.drawString(left_margin, y, "B. KETIDAKHADIRAN")
-    y -= 0.4*cm
+    ket_label = "C. KETIDAKHADIRAN" if cp_shown else "B. KETIDAKHADIRAN"
+    c.drawString(left_margin, y, ket_label)
+    y -= 0.38*cm
     
     c.setFillColor(colors.black)
     c.setFont("Helvetica", 8)
@@ -399,19 +412,20 @@ def create_rapor_pdf(data):
     c.drawString(left_margin, y, f"Sakit              : {sakit} hari")
     c.drawString(left_margin + 5*cm, y, f"Izin               : {izin} hari")
     c.drawString(left_margin + 10*cm, y, f"Tanpa Keterangan : {tanpa} hari")
-    y -= 0.6*cm
+    y -= 0.55*cm
     
-    # ========== E. CATATAN WALI KELAS ==========
+    # ========== D/E. CATATAN WALI KELAS ==========
     c.setFillColor(colors.HexColor("#1a5276"))
     c.setFont("Helvetica-Bold", 9)
-    c.drawString(left_margin, y, "C. CATATAN WALI KELAS")
-    y -= 0.35*cm
+    cat_label = "D. CATATAN WALI KELAS" if cp_shown else "C. CATATAN WALI KELAS"
+    c.drawString(left_margin, y, cat_label)
+    y -= 0.32*cm
     
     c.setFillColor(colors.black)
     c.setFont("Helvetica", 8)
     catatan = data.get('catatan_wali', 'Ananda menunjukkan perkembangan yang baik selama satu semester ini. Pertahankan semangat belajar dan tingkatkan kedisiplinan.')
     
-    # Wrap catatan
+    # Wrap catatan (lebar dinamis)
     catatan_lines = []
     words = catatan.split()
     current = ""
@@ -426,9 +440,9 @@ def create_rapor_pdf(data):
     
     for line in catatan_lines[:5]:
         c.drawString(left_margin, y, line)
-        y -= 0.32*cm
+        y -= 0.30*cm
     
-    y -= 0.3*cm
+    y -= 0.25*cm
     
     # ========== TANDA TANGAN ==========
     c.setStrokeColor(colors.black)
@@ -611,10 +625,11 @@ def create_excel_template():
     return output.getvalue()
 
 
-def process_batch_excel(df):
+def process_batch_excel(df, nama_sekolah="SD Negeri Contoh", npsn="00000000", alamat_sekolah="", kota="Kota Contoh"):
     """
     Memproses DataFrame dari Excel dan menghasilkan ZIP berisi semua PDF rapor.
     Menggunakan auto-generate deskripsi berdasarkan nilai.
+    School identity diambil dari parameter UI batch (sama untuk semua siswa).
     """
     zip_buffer = BytesIO()
     
@@ -635,12 +650,12 @@ def process_batch_excel(df):
                 tahun_ajaran = str(row.get('Tahun_Ajaran', '2025/2026')).strip()
                 agama = str(row.get('Agama', 'Islam')).strip()
                 
-                # Siapkan data dict seperti single mode
+                # Siapkan data dict seperti single mode - gunakan identitas sekolah dari parameter batch
                 data = {
-                    'nama_sekolah': "SD Negeri (isi di single mode jika berbeda)",  # Bisa di-override nanti
-                    'npsn': "00000000",
-                    'alamat_sekolah': "",
-                    'kota': "Kota",
+                    'nama_sekolah': nama_sekolah,
+                    'npsn': npsn,
+                    'alamat_sekolah': alamat_sekolah,
+                    'kota': kota,
                     'nama_siswa': nama,
                     'nisn': nisn,
                     'kelas': kelas,
@@ -1036,7 +1051,13 @@ with tab2:
             # Tombol generate
             if st.button("🚀 GENERATE SEMUA PDF & DOWNLOAD ZIP", type="primary", use_container_width=True):
                 with st.spinner(f"Memproses {len(df)} siswa... Mohon tunggu beberapa saat"):
-                    zip_bytes, success_count, error_list = process_batch_excel(df)
+                    zip_bytes, success_count, error_list = process_batch_excel(
+                        df,
+                        nama_sekolah=batch_nama_sekolah,
+                        npsn=batch_npsn,
+                        alamat_sekolah=batch_alamat,
+                        kota=batch_kota
+                    )
                 
                 st.success(f"🎉 Selesai! **{success_count}** rapor berhasil dibuat.")
                 

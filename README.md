@@ -15,6 +15,12 @@ Aplikasi web sederhana berbasis **Streamlit** untuk membuat Rapor Peserta Didik 
   - Kelas 5-6 (Fase C): + Bahasa Inggris
 - Format mengikuti **Panduan Pembelajaran dan Asesmen** Kemendikdasmen
 
+**Update v1.1 (Juni 2026):** 
+- Perbaikan layout PDF: proporsi kolom tabel lebih baik (lebih lega untuk deskripsi), wrapping teks dinamis berdasarkan lebar aktual (tidak overflow lagi), garis vertikal pemisah kolom tabel, spasi lebih rapi & profesional.
+- Perbaikan penomoran section (A/B/C/D) yang konsisten & benar, termasuk CP/TP opsional.
+- Fitur Batch Excel kini menggunakan identitas sekolah dari UI (sebelumnya hardcoded).
+- Deskripsi & keterangan di PDF lebih rapi, tidak terpotong, siap cetak.
+
 ## 📥 Cara Install & Menjalankan (5 Menit)
 
 ### 1. Pastikan Python sudah terinstall
