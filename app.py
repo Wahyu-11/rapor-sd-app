@@ -76,6 +76,42 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ==================== TEMA WARNA PROFESIONAL (BARU v1.4) ====================
+# Tema warna menarik & profesional untuk PDF Rapor
+# Memungkinkan user mengganti warna header, border, tabel agar lebih menarik sesuai branding sekolah
+COLOR_THEMES = {
+    "Biru Klasik (Default)": {
+        "primary": "#1a5276",           # Warna utama header, judul section, border
+        "table_header_bg": "#d5dbdb",   # Background header tabel nilai
+        "row_alt": "#f8f9f9",           # Warna baris selang-seling tabel
+        "description": "Profesional & formal, cocok untuk dokumen resmi"
+    },
+    "Hijau Pembelajaran": {
+        "primary": "#1e8449",
+        "table_header_bg": "#d5f5e3",
+        "row_alt": "#eafaf1",
+        "description": "Segar & edukatif, cocok untuk sekolah yang fokus lingkungan & pertumbuhan"
+    },
+    "Teal Modern": {
+        "primary": "#117a65",
+        "table_header_bg": "#d1f2eb",
+        "row_alt": "#e8f6f3",
+        "description": "Modern & tenang, memberikan kesan profesional yang up-to-date"
+    },
+    "Ungu Edukatif": {
+        "primary": "#6c3483",
+        "table_header_bg": "#e8daef",
+        "row_alt": "#f5eef8",
+        "description": "Kreatif & inspiratif, cocok untuk sekolah dengan pendekatan seni & inovasi"
+    },
+    "Navy Elegan": {
+        "primary": "#1b4f72",
+        "table_header_bg": "#d4e6f1",
+        "row_alt": "#ebf5fb",
+        "description": "Elegan & berwibawa, pilihan bagus untuk sekolah negeri/swasta bergengsi"
+    },
+}
+
 # ==================== FUNGSI BANTU ====================
 def get_fase(kelas):
     if kelas in [1, 2]:
@@ -199,6 +235,19 @@ def create_rapor_pdf(data, pagesize=A4):
     c = canvas.Canvas(buffer, pagesize=pagesize)
     width, height = pagesize
     
+    # Ambil pengaturan warna dari data (dukungan fitur baru Tema Warna & Background)
+    # Fallback ke warna default jika tidak diset (backward compatible dengan versi lama)
+    primary_color = data.get('primary_color', '#1a5276')
+    table_header_bg = data.get('table_header_bg', '#d5dbdb')
+    row_alt_color = data.get('row_alt_color', '#f8f9f9')
+    page_bg_color = data.get('page_bg_color', '#FFFFFF')
+    
+    # Background halaman opsional (sangat direkomendasikan warna terang seperti #F8F9FA atau #FFFFFF)
+    # Berguna untuk tampilan digital yang lebih menarik; untuk cetak gunakan #FFFFFF
+    if page_bg_color and str(page_bg_color).upper() != '#FFFFFF':
+        c.setFillColor(colors.HexColor(page_bg_color))
+        c.rect(0, 0, width, height, fill=1, stroke=0)
+    
     # Margin
     left_margin = 1.5 * cm
     right_margin = 1.5 * cm
@@ -208,8 +257,8 @@ def create_rapor_pdf(data, pagesize=A4):
     y = height - top_margin
     
     # ========== HEADER ==========
-    # Kotak header
-    c.setFillColor(colors.HexColor("#1a5276"))
+    # Kotak header (menggunakan primary_color dari tema)
+    c.setFillColor(colors.HexColor(primary_color))
     c.rect(0, height - 2.8*cm, width, 2.8*cm, fill=1, stroke=0)
     
     c.setFillColor(colors.white)
@@ -225,8 +274,8 @@ def create_rapor_pdf(data, pagesize=A4):
     
     y = height - 3.3*cm
     
-    # Nama Sekolah
-    c.setFillColor(colors.HexColor("#1a5276"))
+    # Nama Sekolah (ikut primary_color tema)
+    c.setFillColor(colors.HexColor(primary_color))
     c.setFont("Helvetica-Bold", 13)
     c.drawCentredString(width/2, y, data.get('nama_sekolah', 'SEKOLAH DASAR'))
     y -= 0.45*cm
@@ -249,14 +298,35 @@ def create_rapor_pdf(data, pagesize=A4):
         except Exception:
             pass  # abaikan jika logo bermasalah
     
-    # Garis pemisah
-    c.setStrokeColor(colors.HexColor("#1a5276"))
+    # ========== WATERMARK LOGO TRANSPARAN DI TENGAH HALAMAN (BARU) ==========
+    # Logo besar, samar (seperti watermark), di tengah halaman agar tidak mengganggu teks
+    # Hanya muncul jika user mencentang checkbox "Tampilkan logo sebagai Watermark"
+    show_wm = data.get('show_watermark', False)
+    if logo_bytes and show_wm:
+        try:
+            logo_reader = ImageReader(BytesIO(logo_bytes))
+            # Ukuran watermark besar (sekitar 55-60% lebar halaman, tetap proporsional)
+            wm_size = min(width * 0.58, height * 0.45)   # otomatis menyesuaikan ukuran kertas (A4/F4)
+            wm_x = (width - wm_size) / 2
+            wm_y = (height - wm_size) / 2 - 1.2*cm       # sedikit ke atas agar seimbang dengan header & tanda tangan
+            
+            c.saveState()
+            c.setFillAlpha(0.08)   # sangat samar/transparan (0.05 - 0.12 biasanya bagus)
+            c.drawImage(logo_reader, wm_x, wm_y,
+                        width=wm_size, height=wm_size,
+                        preserveAspectRatio=True, mask='auto')
+            c.restoreState()
+        except Exception:
+            pass  # abaikan jika logo bermasalah saat watermark
+    
+    # Garis pemisah (ikut primary_color)
+    c.setStrokeColor(colors.HexColor(primary_color))
     c.setLineWidth(1.5)
     c.line(left_margin, y, width - right_margin, y)
     y -= 0.6*cm
     
     # ========== IDENTITAS SISWA ==========
-    c.setFillColor(colors.HexColor("#1a5276"))
+    c.setFillColor(colors.HexColor(primary_color))
     c.setFont("Helvetica-Bold", 10)
     c.drawString(left_margin, y, "IDENTITAS PESERTA DIDIK")
     y -= 0.45*cm
@@ -312,13 +382,13 @@ def create_rapor_pdf(data, pagesize=A4):
     y -= 0.5*cm
     
     # ========== A. NILAI DAN CAPAIAN KOMPETENSI ==========
-    c.setFillColor(colors.HexColor("#1a5276"))
+    c.setFillColor(colors.HexColor(primary_color))
     c.setFont("Helvetica-Bold", 10)
     c.drawString(left_margin, y, "A. NILAI DAN CAPAIAN KOMPETENSI")
     y -= 0.5*cm
     
-    # Header tabel
-    c.setFillColor(colors.HexColor("#d5dbdb"))
+    # Header tabel (menggunakan table_header_bg dari tema)
+    c.setFillColor(colors.HexColor(table_header_bg))
     c.rect(left_margin, y - 0.35*cm, usable_width, 0.55*cm, fill=1, stroke=0)
     
     c.setFillColor(colors.black)
@@ -402,9 +472,9 @@ def create_rapor_pdf(data, pagesize=A4):
     for idx, rd in enumerate(row_data):
         actual_row_h = rd['height']
         
-        # Background selang-seling
+        # Background selang-seling (menggunakan row_alt_color dari tema)
         if idx % 2 == 0:
-            c.setFillColor(colors.HexColor("#f8f9f9"))
+            c.setFillColor(colors.HexColor(row_alt_color))
             c.rect(left_margin, y - actual_row_h + 0.08*cm, usable_width, actual_row_h, fill=1, stroke=0)
         
         c.setFillColor(colors.black)
@@ -433,7 +503,7 @@ def create_rapor_pdf(data, pagesize=A4):
         y -= actual_row_h
     
     # Border tabel + garis vertikal (tinggi disesuaikan dengan konten aktual)
-    c.setStrokeColor(colors.HexColor("#1a5276"))
+    c.setStrokeColor(colors.HexColor(primary_color))
     c.setLineWidth(0.8)
     table_height = table_data_top - y + 0.50*cm   # tinggi total data rows + sedikit padding header
     c.rect(left_margin, y, usable_width, table_height, fill=0, stroke=1)
@@ -450,7 +520,7 @@ def create_rapor_pdf(data, pagesize=A4):
     cp_tp = data.get('cp_tp_ringkasan', '').strip()
     cp_shown = False
     if cp_tp and cp_tp != "":
-        c.setFillColor(colors.HexColor("#1a5276"))
+        c.setFillColor(colors.HexColor(primary_color))
         c.setFont("Helvetica-Bold", 9)
         c.drawString(left_margin, y, "B. CAPAIAN PEMBELAJARAN (CP) & TUJUAN PEMBELAJARAN (TP)")
         y -= 0.4*cm
@@ -479,7 +549,7 @@ def create_rapor_pdf(data, pagesize=A4):
         cp_shown = True
     
     # ========== C/D. KETIDAKHADIRAN ==========
-    c.setFillColor(colors.HexColor("#1a5276"))
+    c.setFillColor(colors.HexColor(primary_color))
     c.setFont("Helvetica-Bold", 9)
     ket_label = "C. KETIDAKHADIRAN" if cp_shown else "B. KETIDAKHADIRAN"
     c.drawString(left_margin, y, ket_label)
@@ -498,7 +568,7 @@ def create_rapor_pdf(data, pagesize=A4):
     y -= 0.55*cm
     
     # ========== D/E. CATATAN WALI KELAS ==========
-    c.setFillColor(colors.HexColor("#1a5276"))
+    c.setFillColor(colors.HexColor(primary_color))
     c.setFont("Helvetica-Bold", 9)
     cat_label = "D. CATATAN WALI KELAS" if cp_shown else "C. CATATAN WALI KELAS"
     c.drawString(left_margin, y, cat_label)
@@ -709,13 +779,16 @@ def create_excel_template():
     return output.getvalue()
 
 
-def process_batch_excel(df, nama_sekolah="SD Negeri Contoh", npsn="00000000", alamat_sekolah="", kota="Kota Contoh", logo_bytes=None, muatan_lokal_name="Muatan Lokal"):
+def process_batch_excel(df, nama_sekolah="SD Negeri Contoh", npsn="00000000", alamat_sekolah="", kota="Kota Contoh", logo_bytes=None, muatan_lokal_name="Muatan Lokal", show_watermark=False,
+                        primary_color="#1a5276", table_header_bg="#d5dbdb", row_alt_color="#f8f9f9", page_bg_color="#FFFFFF"):
     """
     Memproses DataFrame dari Excel dan menghasilkan ZIP berisi semua PDF rapor.
     Menggunakan auto-generate deskripsi berdasarkan nilai.
     School identity diambil dari parameter UI batch (sama untuk semua siswa).
     logo_bytes: bytes dari file logo yang sama untuk semua rapor (opsional).
     muatan_lokal_name: Nama kustom Muatan Lokal yang sama untuk semua siswa dalam batch (default: "Muatan Lokal").
+    show_watermark: Jika True dan logo_bytes tersedia, setiap PDF akan memiliki logo besar transparan di tengah halaman (watermark).
+    primary_color, table_header_bg, row_alt_color, page_bg_color: Warna tema yang sama untuk semua rapor dalam batch.
     """
     zip_buffer = BytesIO()
     
@@ -750,6 +823,12 @@ def process_batch_excel(df, nama_sekolah="SD Negeri Contoh", npsn="00000000", al
                     'tahun_ajaran': tahun_ajaran,
                     'agama': agama,
                     'logo_bytes': logo_bytes,
+                    'show_watermark': show_watermark,
+                    # Warna tema batch (sama untuk semua PDF)
+                    'primary_color': primary_color,
+                    'table_header_bg': table_header_bg,
+                    'row_alt_color': row_alt_color,
+                    'page_bg_color': page_bg_color,
                 }
                 
                 # Bangun daftar mapel & nilai berdasarkan kelas
@@ -865,7 +944,7 @@ with st.sidebar:
     """)
     
     st.markdown("---")
-    st.caption("Versi 1.0 | Format mengikuti Panduan Pembelajaran dan Asesmen 2025")
+    st.caption("Versi 1.4 | 🎨 Tema Warna & Background | Format sesuai Panduan Kurikulum Merdeka")
 
     # === PWA INSTALLATION GUIDE ===
     with st.expander("📱 Install sebagai Aplikasi di Android (PWA)", expanded=False):
@@ -896,12 +975,72 @@ with tab1:
         alamat_sekolah = st.text_input("Alamat Sekolah", value="Jl. Pendidikan No. 1, Kota Contoh", key="alamat")
         kota = st.text_input("Kota/Kabupaten", value="Kota Contoh", key="kota")
     
-    # Logo upload (opsional) - akan muncul di pojok kiri atas PDF
+    # Logo upload (opsional) - akan muncul di pojok kiri atas PDF + Watermark tengah
     logo_file = st.file_uploader(
         "🖼️ Upload Logo Sekolah (PNG / JPG, opsional)", 
         type=["png", "jpg", "jpeg"],
         help="Logo akan ditampilkan di pojok kiri atas halaman rapor. Gunakan logo resmi sekolah dengan background transparan atau putih untuk hasil terbaik. Ukuran ideal: persegi."
     )
+    
+    show_watermark = st.checkbox(
+        "💧 Tampilkan logo sebagai Watermark transparan di TENGAH halaman",
+        value=True if logo_file else False,
+        key="show_watermark",
+        disabled=logo_file is None,
+        help="Jika dicentang, logo akan muncul samar (seperti watermark) di tengah halaman rapor. Memberikan kesan profesional dan branding sekolah yang kuat. Hanya aktif jika logo sudah di-upload."
+    )
+    
+    # ==================== FITUR BARU: TEMA WARNA & BACKGROUND PDF ====================
+    with st.expander("🎨 Kustomisasi Warna & Tema Rapor (Baru - v1.4)", expanded=False):
+        st.markdown("""
+        **Pilih tema warna untuk membuat rapor lebih menarik & sesuai branding sekolah Anda.**
+        - Tema yang disediakan sudah dirancang profesional & mudah dibaca.
+        - Header, border, judul section, dan styling tabel akan menyesuaikan warna pilihan Anda.
+        - Untuk hasil terbaik saat **cetak**, pilih warna yang tidak terlalu gelap.
+        - Fitur **Background Halaman** hanya disarankan untuk tampilan digital (warna sangat terang).
+        """)
+        
+        theme_options = list(COLOR_THEMES.keys()) + ["Custom (Pilih Warna Manual)"]
+        theme_choice = st.selectbox(
+            "Pilih Tema Warna Profesional",
+            options=theme_options,
+            index=0,
+            key="theme_choice",
+            help="Tema akan diterapkan langsung ke PDF yang dihasilkan."
+        )
+        
+        if theme_choice == "Custom (Pilih Warna Manual)":
+            st.caption("Atur warna sesuai keinginan Anda. Disarankan primary/header berwarna gelap agar teks putih kontras.")
+            col_c1, col_c2 = st.columns(2)
+            with col_c1:
+                primary_color = st.color_picker("Warna Utama Header, Border & Judul", "#1a5276", key="custom_primary")
+                table_header_bg = st.color_picker("Warna Background Header Tabel", "#d5dbdb", key="custom_table_header")
+            with col_c2:
+                row_alt_color = st.color_picker("Warna Baris Selang-seling Tabel", "#f8f9f9", key="custom_row_alt")
+                page_bg_color = st.color_picker("Warna Background Halaman (opsional, sangat terang)", "#FFFFFF", key="custom_page_bg")
+                st.caption("Contoh background menarik: #F4F6F7 (abu terang), #EBF5FB (biru muda), #FEF9E7 (krem)")
+        else:
+            theme = COLOR_THEMES[theme_choice]
+            primary_color = theme["primary"]
+            table_header_bg = theme["table_header_bg"]
+            row_alt_color = theme["row_alt"]
+            page_bg_color = "#FFFFFF"  # default putih untuk tema preset (bisa diubah di custom)
+            st.info(f"**{theme_choice}**: {theme['description']}")
+            # Tampilkan preview warna
+            st.markdown(f"""
+            <div style="display:flex; gap:10px; margin-top:8px;">
+                <div style="background:{primary_color}; width:60px; height:25px; border-radius:4px; border:1px solid #ccc;"></div>
+                <div style="background:{table_header_bg}; width:60px; height:25px; border-radius:4px; border:1px solid #ccc;"></div>
+                <div style="background:{row_alt_color}; width:60px; height:25px; border-radius:4px; border:1px solid #ccc;"></div>
+            </div>
+            <small>Primary • Table Header • Row Alt</small>
+            """, unsafe_allow_html=True)
+    
+    # Simpan pilihan warna ke session_state agar bisa diakses saat generate
+    st.session_state['primary_color'] = primary_color
+    st.session_state['table_header_bg'] = table_header_bg
+    st.session_state['row_alt_color'] = row_alt_color
+    st.session_state['page_bg_color'] = page_bg_color
     
     # === IDENTITAS SISWA ===
     st.markdown('<div class="section-header">👤 IDENTITAS PESERTA DIDIK</div>', unsafe_allow_html=True)
@@ -1189,6 +1328,12 @@ with tab1:
                     'tempat_tanggal': tempat_tanggal,
                     'cp_tp_ringkasan': cp_tp_ringkasan,
                     'logo_bytes': logo_file.getvalue() if logo_file else None,
+                    'show_watermark': show_watermark,
+                    # Warna tema & background (dari session_state yang diisi di expander)
+                    'primary_color': st.session_state.get('primary_color', '#1a5276'),
+                    'table_header_bg': st.session_state.get('table_header_bg', '#d5dbdb'),
+                    'row_alt_color': st.session_state.get('row_alt_color', '#f8f9f9'),
+                    'page_bg_color': st.session_state.get('page_bg_color', '#FFFFFF'),
                 }
                 
                 pdf_bytes = create_rapor_pdf(data, pagesize=selected_pagesize)
@@ -1241,6 +1386,48 @@ with tab2:
             key="batch_muatan_lokal",
             help="Contoh: Bahasa Jawa, Budaya Sunda, dll. Nilai akan diambil dari kolom 'Nilai_Muatan_Lokal' di Excel."
         )
+        
+        # Watermark checkbox untuk batch (BARU)
+        batch_show_watermark = st.checkbox(
+            "💧 Tampilkan logo sebagai Watermark transparan di TENGAH halaman (untuk semua siswa)",
+            value=True if batch_logo_file else False,
+            key="batch_show_watermark",
+            disabled=batch_logo_file is None,
+            help="Logo akan muncul samar di tengah setiap PDF rapor dalam ZIP yang dihasilkan. Memberikan kesan profesional pada semua dokumen sekaligus."
+        )
+        
+        # ==================== TEMA WARNA UNTUK BATCH (sama untuk semua PDF dalam ZIP) ====================
+        st.markdown("---")
+        st.subheader("🎨 Tema Warna untuk Semua Rapor dalam Batch")
+        batch_theme_options = list(COLOR_THEMES.keys()) + ["Custom (Pilih Warna Manual)"]
+        batch_theme_choice = st.selectbox(
+            "Pilih Tema Warna (berlaku untuk semua siswa)",
+            options=batch_theme_options,
+            index=0,
+            key="batch_theme_choice"
+        )
+        
+        if batch_theme_choice == "Custom (Pilih Warna Manual)":
+            col_bc1, col_bc2 = st.columns(2)
+            with col_bc1:
+                batch_primary = st.color_picker("Warna Utama Header/Border", "#1a5276", key="batch_custom_primary")
+                batch_table_header = st.color_picker("Warna Header Tabel", "#d5dbdb", key="batch_custom_table")
+            with col_bc2:
+                batch_row_alt = st.color_picker("Warna Baris Selang-seling", "#f8f9f9", key="batch_custom_row")
+                batch_page_bg = st.color_picker("Background Halaman", "#FFFFFF", key="batch_custom_page")
+        else:
+            btheme = COLOR_THEMES[batch_theme_choice]
+            batch_primary = btheme["primary"]
+            batch_table_header = btheme["table_header_bg"]
+            batch_row_alt = btheme["row_alt"]
+            batch_page_bg = "#FFFFFF"
+            st.caption(f"Tema: {batch_theme_choice} — {btheme['description']}")
+        
+        # Simpan ke session untuk digunakan saat generate batch
+        st.session_state['batch_primary_color'] = batch_primary
+        st.session_state['batch_table_header_bg'] = batch_table_header
+        st.session_state['batch_row_alt_color'] = batch_row_alt
+        st.session_state['batch_page_bg_color'] = batch_page_bg
     
     # Tombol download template
     if st.button("📥 DOWNLOAD TEMPLATE EXCEL SIAP PAKAI", type="primary", use_container_width=True):
@@ -1284,7 +1471,12 @@ with tab2:
                         alamat_sekolah=batch_alamat,
                         kota=batch_kota,
                         logo_bytes=batch_logo_file.getvalue() if batch_logo_file else None,
-                        muatan_lokal_name=batch_muatan_lokal
+                        muatan_lokal_name=batch_muatan_lokal,
+                        show_watermark=batch_show_watermark,
+                        primary_color=st.session_state.get('batch_primary_color', '#1a5276'),
+                        table_header_bg=st.session_state.get('batch_table_header_bg', '#d5dbdb'),
+                        row_alt_color=st.session_state.get('batch_row_alt_color', '#f8f9f9'),
+                        page_bg_color=st.session_state.get('batch_page_bg_color', '#FFFFFF')
                     )
                 
                 st.success(f"🎉 Selesai! **{success_count}** rapor berhasil dibuat.")

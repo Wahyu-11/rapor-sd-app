@@ -38,6 +38,25 @@ Aplikasi web sederhana berbasis **Streamlit** untuk membuat Rapor Peserta Didik 
 - **Pilihan Ukuran Kertas sebelum Download**: Sebelum klik tombol Generate, Anda bisa pilih **A4 (standar)** atau **F4/Folio (lebih tinggi)**. F4 memberikan ruang ekstra ~33 mm sehingga rapor tetap rapi dan lega meskipun ada 5–10 mapel tambahan.
 - Cocok untuk sekolah yang sering menambahkan mapel unggulan atau Muatan Lokal khusus.
 
+**Fitur Baru: Logo Watermark Transparan di Tengah Halaman**
+- Setelah upload logo sekolah, muncul checkbox **"Tampilkan logo sebagai Watermark transparan di TENGAH halaman"**.
+- Jika dicentang, logo akan muncul **samar** (opacity rendah) tepat di tengah halaman sebagai background watermark — memberikan kesan resmi dan branding sekolah yang kuat.
+- Ukuran watermark otomatis menyesuaikan dengan ukuran kertas (A4/F4) dan posisinya di tengah konten.
+- **Mode Batch juga mendukung**: Checkbox yang sama tersedia di expander identitas sekolah. Jika dicentang, **semua PDF** dalam ZIP yang dihasilkan akan memiliki watermark logo di tengah.
+- Tetap ada logo kecil di pojok kiri atas header (seperti sebelumnya).
+- Sangat cocok untuk dokumen resmi sekolah. Logo sebaiknya berlatar transparan atau putih bersih.
+
+**Update v1.4 (Kustomisasi Warna & Tema Menarik - Juni 2026):**
+- **Fitur baru**: 🎨 **Tema Warna Profesional** untuk PDF Rapor.
+  - 5 tema siap pakai yang menarik & profesional: Biru Klasik, Hijau Pembelajaran, Teal Modern, Ungu Edukatif, Navy Elegan.
+  - Setiap tema mengubah warna header utama, border, judul section, background header tabel, dan baris selang-seling tabel secara otomatis.
+  - Memberikan tampilan rapor yang lebih fresh, modern, dan sesuai branding sekolah/daerah.
+- **Mode Custom**: Guru bisa memilih warna manual via color picker (primary, table header, row alt, bahkan background halaman opsional).
+- Background halaman warna terang (misal krem atau biru muda sangat samar) membuat PDF digital terlihat lebih menarik & premium.
+- **Batch Excel juga mendukung**: Pilih tema sekali di expander identitas sekolah → semua PDF dalam ZIP menggunakan tema warna yang sama (konsisten).
+- Cocok untuk sekolah yang ingin rapor terlihat lebih "hidup" dan branded tanpa mengorbankan profesionalisme.
+- Fitur ini tidak mempengaruhi isi data atau deskripsi, hanya tampilan visual PDF.
+
 ## 📥 Cara Install & Menjalankan (5 Menit)
 
 ### 1. Pastikan Python sudah terinstall
